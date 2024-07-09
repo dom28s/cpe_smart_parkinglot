@@ -18,25 +18,25 @@ current_x = 0
 current_y = 0
 park = []
 
-# while True:
-#     pic2 = pic.copy()
-#     cv.putText(pic2,str(str(current_x) +" "+ str(current_y)),(0,50),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
-#     for y in park:
-#         for x in y:
-#             cv.line(pic2,(x[0][0],x[0][1]),(x[1][0],x[1][1]),(255,0,0),2)
-#     cv.imshow("frame",pic2)
+while True:
+    pic2 = pic.copy()
+    cv.putText(pic2,str(str(current_x) +" "+ str(current_y)),(0,50),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
+    for y in park:
+        for x in y:
+            cv.line(pic2,(x[0][0],x[0][1]),(x[1][0],x[1][1]),(255,0,0),2)
+    cv.imshow("frame",pic2)
     
-#     if cv.waitKey(0) & 0xFF == ord('s'):
-#         current_x, current_y = pyautogui.position()
-#         pointer.append([current_x-1920, current_y])
-#         if len(pointer)==2:
-#             line.append(pointer.copy())
-#             pointer = []
-#         if len(line) == 2:
-#             park.append(line.copy())
-#             line = []
-#     if cv.waitKey(0) & 0xFF == ord('q'):
-#         break
+    if cv.waitKey(0) & 0xFF == ord('s'):
+        current_x, current_y = pyautogui.position()
+        pointer.append([current_x-1920, current_y])
+        if len(pointer)==2:
+            line.append(pointer.copy())
+            pointer = []
+        if len(line) == 2:
+            park.append(line.copy())
+            line = []
+    if cv.waitKey(0) & 0xFF == ord('q'):
+        break
      
 
 while True:
@@ -76,7 +76,7 @@ while True:
 
         
 
-    # cv.imshow("frame", frame)
+    cv.imshow("frame", frame)
 
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
