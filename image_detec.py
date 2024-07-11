@@ -1,16 +1,25 @@
 from ultralytics import YOLO
 import cv2
+import numpy as np
 
 # โหลดโมเดล
-Nmodel = YOLO('model/number.pt')
-Lmodel = YOLO('model/licenplate.pt')
+Nmodel = YOLO('model/best_numberchar_50.pt')
+# Nmodel = YOLO('model/number.pt')
+
+
+# Lmodel = YOLO('model/best_LicensePlate_50.pt')
+Lmodel = YOLO('model/best_LicensePlate_25.pt')
 
 # โหลดภาพ
-pic = cv2.imread('images/plate.jpg')
+pic = cv2.imread('images/platetest1.png')
 
-# ตรวจจับวัตถุในภาพ
+# เพิ่มความคมชัดให้กับภาพ
+# kernel = np.array([[0, -1, 0], [-1, 5,-1], [0, -1, 0]])
+# sharpened_pic = cv2.filter2D(pic, -1, kernel)
+
+# ตรวจจับวัตถุในภาพที่มีการเพิ่มความคมชัด
 result = Lmodel(pic, conf=0.5)
- 
+
 # วาดกรอบและชื่อวัตถุที่ตรวจจับได้บนภาพ
 for x in result[0].boxes:
     name = Lmodel.names[int(x.cls)]
@@ -21,7 +30,7 @@ for x in result[0].boxes:
 
     # ครอบภาพและขยายขนาดภาพที่ครอบ
     cropped_pic = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
-    cropped_pic = cv2.resize(cropped_pic, (1920, 1080))
+    cropped_pic = cv2.resize(cropped_pic, (640, 480))
 
     # ตรวจจับวัตถุในภาพที่ครอบ
     result2 = Nmodel(cropped_pic, conf=0.5)
