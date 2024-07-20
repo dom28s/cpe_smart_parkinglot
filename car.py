@@ -2,11 +2,11 @@ from ultralytics import YOLO
 import cv2 as cv
 import pyautogui
 
-model = YOLO('yolov8l.pt')
+model = YOLO('model/yolov8l.pt')
 pointer = []
 line = []
 
-vdo = cv.VideoCapture('videos/rpark.mp4')
+vdo = cv.VideoCapture('vdo_from_park/topCam2.mp4')
 
 i,pic = vdo.read()
 pic = cv.resize(pic,(1920,1080))
@@ -17,10 +17,14 @@ cv.setWindowProperty('frame', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 current_x = 0
 current_y = 0
 park = []
+i =0
 
 while True:
     pic2 = pic.copy()
     cv.putText(pic2,str(str(current_x) +" "+ str(current_y)),(0,50),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
+    # cv.putText(pic2,str(str(park)),(0,80),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
+    
+    
     for y in park:
         for x in y:
             cv.line(pic2,(x[0][0],x[0][1]),(x[1][0],x[1][1]),(255,0,0),2)
@@ -51,7 +55,6 @@ while True:
 
     for x in results[0].boxes:          #car
         name = results[0].names[int(x.cls)]
-        print(results[0].name)
         pix = x.xyxy[0].tolist()
 
         for i in park:   #left top #left bottom #

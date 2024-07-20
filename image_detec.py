@@ -3,15 +3,15 @@ import cv2
 import numpy as np
 
 # โหลดโมเดล
-Nmodel = YOLO('model/best_numberchar_50.pt')
-# Nmodel = YOLO('model/number.pt')
+# Nmodel = YOLO('model/best_numberchar_50.pt')
+Nmodel = YOLO('model/number.pt')
 
 
 # Lmodel = YOLO('model/best_LicensePlate_50.pt')
-Lmodel = YOLO('model/best_LicensePlate_25.pt')
+Lmodel = YOLO('model/licenplate.pt')
 
 # โหลดภาพ
-pic = cv2.imread('images/platetest1.png')
+pic = cv2.imread('images/licen_p2.png')
 
 # เพิ่มความคมชัดให้กับภาพ
 # kernel = np.array([[0, -1, 0], [-1, 5,-1], [0, -1, 0]])
