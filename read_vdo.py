@@ -8,6 +8,8 @@ modelC = YOLO('model/thaiChar_100b.pt')
 count =0
 
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
 while True:
     x, y = pyautogui.position()
@@ -16,39 +18,42 @@ while True:
         print("Failed to read frame. Exiting...")
         break
 
+    cv.putText(pic,str(x)+' '+str(y),(0,50),cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
     pic = cv.resize(pic, (1260, 860))
     result_model = model(pic, conf=0.5, classes=2)
-    print(result_model)
 
     for e in result_model[0].boxes:
         name = result_model[0].names[int(e.cls)]
         pix = e.xyxy.tolist()[0]  # Convert tensor to list and access the first element
 
-        cv.putText(pic, "%s %.2f" % (str(name), float(e.conf)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
+        if pix[0]>500:
 
-        crop_car = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
-        resultP = modelP(crop_car,conf=0.5)
+            cv.putText(pic, "%s %.2f" % (str(name), float(e.conf)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
 
-        for x in resultP[0].boxes:
-            pname = resultP[0].names[int(x.cls)]
-            ppix = x.xyxy.tolist()[0]
-            cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
+            crop_car = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
+            resultP = modelP(crop_car,conf=0.5)
 
-            crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
-            crop_plate = cv.resize(crop_plate,(560,250))
+            for x in resultP[0].boxes:
+                pname = resultP[0].names[int(x.cls)]
+                ppix = x.xyxy.tolist()[0]
+                cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
 
-            resultC = modelC(crop_plate,conf=0.5)
+                crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
+                crop_plate = cv.resize(crop_plate,(560,250))
 
-            for y in resultC[0].boxes:
-                cname = resultC[0].names[int(y.cls)]
-                cpix = y.xyxy.tolist()[0]
+                resultC = modelC(crop_plate,conf=0.5)
 
-                cv.putText(crop_plate, "%s %.2f" % (str(cname), float(y.conf)), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
-                cv.imshow('df',crop_plate)
+                for y in resultC[0].boxes:
+                    cname = resultC[0].names[int(y.cls)]
+                    cpix = y.xyxy.tolist()[0]
 
-    cv.imshow('test', pic)
+                    cv.putText(crop_plate, "%s %.2f" % (str(cname), float(y.conf)), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
+                    cv.imshow('df',crop_plate)
+
+    cv.imshow('Full Scene', pic)
 
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
