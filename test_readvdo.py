@@ -16,52 +16,67 @@ def getFrame():
     global vdo,frame
     count = 0
     while True:
+        ret, frame = vdo.read()
         if count %6 != 0:
             count +=1
-            time.sleep(0.010)
+            time.sleep(0.050)
             continue
         else:
             count +=1
-            time.sleep(0.010)
+            time.sleep(0.050)
 
-        ret, frame = vdo.read()
         if not ret:
             print("Failed to read frame. Exiting...")
             break
 
 def detect():
     global vdo,frame,Lmodel,NModel,model
+    countC =0
+    countP=0
     while True:
-        result = model(frame,conf=0.5)
+        if frame is None:
+            continue
+
+        result = model(frame,conf=0.6,classes = 2)
         for f in result[0].boxes:
             fname = result[0].names[int(f.cls)]
             fpos = f.xyxy.tolist()
-            cv.putText(frame, "%s %.2f" % (str(fname), (float(f.conf))), (int(fpos[0]),int(fpos[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv.rectangle(frame, (int(fpos[0]), int(fpos[1])), (int(fpos[2]), int(fpos[3])), (0, 255, 0), 2)
 
+            cv.putText(frame,fname, (int(fpos[0][0]), int(fpos[0][1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv.rectangle(frame, (int(fpos[0][0]), int(fpos[0][1])), (int(fpos[0][2]), int(fpos[0][3])), (0, 255, 0), 2)
 
+            cropped_picC = frame[int(fpos[0][1]):int(fpos[0][3]), int(fpos[0][0]):int(fpos[0][2])]
+            Lresult = Lmodel(cropped_picC, conf=0.5)
+            # cv.imshow('car'+str(countC),cropped_picC)
+            countC+=1
+            
+            if cv.waitKey(1) & 0xFF == ord('q'):
+                break
 
+            for x in Lresult[0].boxes:
+                name = Lresult[0].names[int(x.cls)]
+                pix = x.xyxy[0].tolist()
 
+                cv.putText(cropped_picC, "%s %.2f" % (str(name), (float(x.conf))), (int(pix[0][0]), int(pix[0][1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv.rectangle(cropped_picC, (int(pix[0][0]), int(pix[0][1])), (int(pix[0][2]), int(pix[0][3])), (0, 255, 0), 2)
 
-        Lresult = Lmodel(frame, conf=0.5)
-        if frame is None:
-            continue
-        for i, x in enumerate(Lresult[0].boxes):
-            name = Lresult[0].names[int(x.cls)]
-            pix = x.xyxy[0].tolist()
+                cropped_picP = cropped_picC[int(pix[0][1]):int(pix[0][3]), int(pix[0][0]):int(pix[0][2])]
+                Nresult = NModel(cropped_picP,conf=0.5)
 
-            cv.putText(frame, "%s %.2f" % (str(name), (float(x.conf))), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv.rectangle(frame, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
+                if cv.waitKey(1) & 0xFF == ord('q'):
+                    break
 
-            cropped_pic = frame[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
-            Nresult = NModel(cropped_pic,conf=0.5)
+                for i in Nresult[0].boxes:
+                    Nname = Nresult[0].names[int(i.cls)]
+                    Npix = i.xyxy[0].tolist()
 
-            for i in Nresult[0].boxes:
-                Nname = Nresult[0].names[int(i.cls)]
-                Npix = i.xyxy[0].tolist()
+                    cv.putText(cropped_picP, "%s" % str(Nname), (int(Npix[0][0]), int(Npix[0][1])), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                    cv.rectangle(cropped_picP, (int(Npix[0][0]), int(Npix[0][1])), (int(Npix[0][2]), int(Npix[0][3])), (0, 255, 0), 1)
 
-                cv.putText(cropped_pic, "%s" % str(Nname), (int(Npix[0]), int(Npix[1])), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-                cv.rectangle(cropped_pic, (int(Npix[0]), int(Npix[1])), (int(Npix[2]), int(Npix[3])), (0, 255, 0), 1)
+                    cv.imshow("plate"+str(countP),cropped_picP)
+                    countP+=1
+                    if cv.waitKey(1) & 0xFF == ord('q'):
+                        break
         
 
 def show():

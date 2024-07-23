@@ -5,13 +5,11 @@ import numpy as np
 # โหลดโมเดล
 # Nmodel = YOLO('model/best_numberchar_50.pt')
 Nmodel = YOLO('model/number.pt')
-
-
-# Lmodel = YOLO('model/best_LicensePlate_50.pt')
-Lmodel = YOLO('model/licenplate.pt')
+Cmodel = YOLO('model/thaiChar_100b.pt')
+Lmodel = YOLO('model/licen_100b.pt')
 
 # โหลดภาพ
-pic = cv2.imread('images/licen_p2.png')
+pic = cv2.imread('images/platetest2.png')
 
 # เพิ่มความคมชัดให้กับภาพ
 # kernel = np.array([[0, -1, 0], [-1, 5,-1], [0, -1, 0]])
@@ -31,6 +29,7 @@ for x in result[0].boxes:
     # ครอบภาพและขยายขนาดภาพที่ครอบ
     cropped_pic = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
     cropped_pic = cv2.resize(cropped_pic, (640, 480))
+    
 
     # ตรวจจับวัตถุในภาพที่ครอบ
     result2 = Nmodel(cropped_pic, conf=0.5)
@@ -42,8 +41,18 @@ for x in result[0].boxes:
         cv2.putText(cropped_pic, "%s" % str(name2), (int(pix2[0]), int(pix2[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
         cv2.rectangle(cropped_pic, (int(pix2[0]), int(pix2[1])), (int(pix2[2]), int(pix2[3])), (0, 255, 0), 1)
 
+        resultC = Cmodel(cropped_pic,conf=0.5)
+
+        for y in resultC[0].boxes:
+                cname = resultC[0].names[int(y.cls)]
+                cpix = y.xyxy.tolist()[0]
+
+                cv2.putText(cropped_pic, "%s" % (str(cname)), (int(cpix[0]), int(cpix[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.rectangle(cropped_pic, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
+
+
         # แสดงภาพที่ครอบและขยายขนาดแล้ว
-        cv2.imshow('Cropped and Resized Image', cropped_pic)
+cv2.imshow('Cropped and Resized Image', cropped_pic)
 
 # แสดงภาพที่ตรวจจับและวาดกรอบ
 cv2.imshow('Result', pic)
