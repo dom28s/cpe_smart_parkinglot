@@ -34,6 +34,27 @@ def mouse_click(event, x, y, flags, param,):
     if event == cv.EVENT_RBUTTONDOWN:
         check = False
 
+def licenCheck(mode):
+    
+    mode = False
+    max = 0
+    datamax = 0
+    for x in range(len(dataword)):
+        if len(dataword[x]) > datamax:
+            max = x
+            datamax = len(dataword[x])
+    for x in range(len(dataword[max])):
+        for j in range(len(dataword[max])):
+            if dataword[max][x][1] < dataword[max][j][1]:
+                t = dataword[max][x]
+                dataword[max][x] = dataword[max][j]
+                dataword[max][j] = t
+    wordfull = ""
+    for x in dataword[max]:
+        wordfull += x[0]+" "
+    print(wordfull)
+    
+
 
 
 pic2 = pic.copy()
@@ -119,23 +140,7 @@ while True:
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
 
-mode = False
-max = 0
-datamax = 0
-for x in range(len(dataword)):
-    if len(dataword[x]) > datamax:
-        max = x
-        datamax = len(dataword[x])
-for x in range(len(dataword[max])):
-    for j in range(len(dataword[max])):
-        if dataword[max][x][1] < dataword[max][j][1]:
-            t = dataword[max][x]
-            dataword[max][x] = dataword[max][j]
-            dataword[max][j] = t
-wordfull = ""
-for x in dataword[max]:
-    wordfull += x[0]+" "
-print(wordfull)
+licenCheck(mode)
 
 vdo.release()
 cv.destroyAllWindows()
