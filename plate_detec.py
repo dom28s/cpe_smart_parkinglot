@@ -2,6 +2,8 @@ from ultralytics import YOLO
 import cv2 as cv
 import pyautogui
 import json
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
 
 with open('class.json', 'r', encoding='utf-8') as file:
     data = json.load(file)
@@ -13,6 +15,7 @@ modelC = YOLO('model/thaiChar_100b.pt')
 count =0
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
 ret, pic = vdo.read()
+wordfull = ""
 
 park = []
 line =[]
@@ -34,9 +37,9 @@ def mouse_click(event, x, y, flags, param,):
     if event == cv.EVENT_RBUTTONDOWN:
         check = False
 
-def licenCheck(mode):
-    
-    mode = False
+def letterCheck():
+    global wordfull
+
     max = 0
     datamax = 0
     for x in range(len(dataword)):
@@ -53,8 +56,15 @@ def licenCheck(mode):
     for x in dataword[max]:
         wordfull += x[0]+" "
     print(wordfull)
-    
 
+
+# def put_text_utf8(image, text, position, font_size=30, color=(0, 255, 0)):
+#     """Draw UTF-8 text on an OpenCV image using Pillow."""
+#     pil_img = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+#     draw = ImageDraw.Draw(pil_img)
+#     font = ImageFont.truetype('arial.ttf', font_size)  # Ensure this font file supports UTF-8
+#     draw.text(position, text, font=font, fill=color)
+#     return cv.cvtColor(np.array(pil_img), cv.COLOR_RGB2BGR)
 
 
 pic2 = pic.copy()
@@ -68,7 +78,7 @@ while check:
 
 
 dataword = []
-mode = False
+
 while True:
     ret, pic = vdo.read()
     if not ret:
@@ -76,20 +86,21 @@ while True:
         break
 
     cv.line(pic, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
-
- 
     result_model = model.track(pic, conf=0.5, classes=2,persist=True)
 
     print(dataword)
 
-    # In the main processing loop
     for e in result_model[0].boxes:
         name = result_model[0].names[int(e.cls)]
         pix = e.xyxy.tolist()[0]  # Convert tensor to list and access the first element
+        id = e.id.tolist()
+        print('tihs is id')
+        print(id)
 
         if pix[0] > 500:
-            cv.putText(pic, "%s %.2f" % (str(name), float(e.conf)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
+            print(result_model[0].boxes)
 
             crop_car = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
             resultP = modelP(crop_car, conf=0.5)
@@ -105,12 +116,10 @@ while True:
 
                 resultC = modelC(crop_plate, conf=0.5)
 
-                # Debugging information
-                
-
-                # Corrected condition logic
                 if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
-                    cv.putText(pic, "YOUNGOHM MATAFAKKA", (904, 632), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    # pic = put_text_utf8(pic, wordfull, (904, 632), font_size=30, color=(0, 255, 0))
+                    cv.putText(pic, "dd", (904, 632), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
 
                 wordf = []
                 for y in resultC[0].boxes:
@@ -125,13 +134,13 @@ while True:
                         print(wordf)
                     except KeyError:
                         print("Key not found in data dictionary")
-                    cv.putText(crop_plate, "%s %.1f" % (str(cname), float(y.conf)), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv.putText(crop_plate,(str(cname)), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
                     print(data[cname])
                     cv.imshow('df', crop_plate)
                 if len(wordf) != 0:
                     dataword.append(wordf.copy())
-                    mode = True
+
 
 
 
@@ -140,7 +149,7 @@ while True:
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
 
-licenCheck(mode)
+letterCheck(mode)
 
 vdo.release()
 cv.destroyAllWindows()

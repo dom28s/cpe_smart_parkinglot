@@ -1,0 +1,47 @@
+
+    "A00": "ก",
+    "A01": "ข",
+    "A02": "ฃ",  # Add missing character
+    "A03": "ค",
+    "A04": "ฅ",  # Add missing character
+    "A05": "ฆ",
+    "A06": "ง",
+    "A07": "จ",
+    "A08": "ฉ",
+    "A09": "ช",
+    "A10": "ซ",  # Add missing character
+    "A11": "ฌ",
+    "A12": "ญ",  # Add missing character
+    "A13": "ฎ",
+    "A14": "ฏ",  # Add missing character
+    "A15": "ฐ",
+    "A16": "ฑ",  # Add missing character
+    "A17": "ฒ",
+    "A18": "ณ",
+    "A19": "ด",
+    "A20": "ต",
+    "A21": "ถ",
+    "A22": "ท",
+    "A23": "ธ",
+    "A24": "น",
+    "A25": "บ",
+    "A26": "ป",
+    "A27": "ผ",
+    "A28": "ฝ",  # Add missing character
+    "A29": "พ",
+    "A30": "ฟ",
+    "A31": "ภ",
+    "A32": "ม",
+    "A33": "ย",
+    "A34": "ร",
+    "A35": "ฤ",
+    "A36": "ล",
+    "A37": "ฦ",  # Add missing character
+    "A38": "ว",
+    "A39": "ศ",
+    "A40": "ษ",
+    "A41": "ส",  # Add missing character
+    "A42": "ห",
+    "A43": "ฬ",
+    "A44": "อ",  # Add missing character
+    "A45": "ฮ"
