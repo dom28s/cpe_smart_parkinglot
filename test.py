@@ -5,6 +5,7 @@ import json
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import time
+from datetime import datetime
 
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
@@ -12,24 +13,27 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-
-check = True
-count = 0
-skip_frames = 6
-frame_counter = 0
-
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 
+check = True
+count = 0
+skip_frames = 7
+frame_counter = 0
+
 ret, pic = vdo.read()
 wordfull = ""
-park = []
 car_id = []
 cross_car =[]
+id_cross = set()
+dataword = []
 plateName =''
 
 fps_start_time = time.time()
 fps_frame_count = 0
+
+timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
+print(timeNow)
 
 try:
     with open('line.json', 'r') as f:
@@ -41,7 +45,7 @@ cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
 def mouse_click(event, x, y, flags, param):
-    global check, line, park
+    global check, line
     if event == cv.EVENT_LBUTTONDOWN:
         line.append([x, y])
         cv.putText(pic2, f'{x} {y}', (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -52,87 +56,33 @@ def mouse_click(event, x, y, flags, param):
     if event == cv.EVENT_RBUTTONDOWN:
         check = False
 
-# def letterCheck(id):
-#     global wordfull
-#     max = 0
-#     datamax = 0
-#     print('id a '+str(id))
-#     print("len dataword "+str(len(dataword)))
-#     print('data word'+str(dataword))
-#     print(' ')
-
-#     for i in range(len(dataword)):
-#         for i2 in range(len(dataword[i])):
-#             if dataword[i][i2][1] == id:
-#                 car_id.append(dataword[i][i2])
-
-#     print('car id '+str(car_id))
-#     print(' ')
-#     # for x in range(len(car_id)):
-#     #     for x in range
-#     #     if car_id[x][2]
-
-
-
-
-#     for x in range(len(car_id)):
-#         if len(car_id[x]) > datamax:
-#             max = x
-#             datamax = len(car_id[x])
-#     for x in range(len(car_id[max])):
-#         for j in range(len(car_id[max])):
-#             if car_id[max][x][1] < car_id[max][j][1]:
-#                 t = car_id[max][x]
-#                 car_id[max][x] = car_id[max][j]
-#                 car_id[max][j] = t
-#     for x in car_id[max]:
-#         wordfull += x[0]+" "
-#     print("this is "+wordfull)
-#     car_id.clear()
-
 def letterCheck(id):
-    global wordfull,plateName
-    car_id = []
-
-    print('id: ' + str(id))
-    print("len dataword: " + str(len(dataword)))
-    print('dataword: ' + str(dataword))
-    print(' ')
-
-    # Collect items with the matching id
+    global wordfull,plateName,car_id,id_cross
+    
     for i in range(len(dataword)):
         for i2 in range(len(dataword[i])):
             if dataword[i][i2][1] == id:
-                car_id.append(dataword[i][i2])
-
+                if len(id_cross)>0:
+                    for i3 in id_cross:
+                        if i3 == id:
+                            return
+                        else:
+                            car_id.append(dataword[i][i2])
+                else:
+                    car_id.append(dataword[i][i2])
     car_id = sorted(car_id, key=lambda x: x[2])
-    print(car_id)
 
-    for i in range(len(car_id)):
-        for i2 in range(len(car_id[i])):
-            print(car_id[i][0])
-            name = str(car_id[i][0])
-            plateName = plateName+name
+    for x in range(len(car_id)):
+        for x2 in range(len(car_id[x])):
+            plateName = plateName+str(car_id[x][0])
 
-    print("this is " + plateName)
-    cross_car.append(plateName)
+    cross_car.append([plateName,timeNow,id])
+
+    for x in range(len(cross_car)):
+        for x2 in range(len(cross_car[x])):
+            id_cross.add(int(cross_car[x][2]))
+
     car_id.clear()
-    plateName =''
-
-    # print(cross_car)
-
-# def plate(ppix,line,pix,id):
-#     print('plate start')
-#     print("len data"+str(len(dataword)))
-#     for i in range(len(dataword)):
-#         for i2 in range(i):
-#             if dataword[i][i2][1] == id:
-#                 car_id.append(dataword[i][i2])
-#                 break
-    # print('car id len '+str(len(car_id)))
-    # print("car id "+str(car_id))
-    # print(' ')
-    
 
 if len(line) < 2:
     pic2 = pic.copy()
@@ -142,8 +92,6 @@ if len(line) < 2:
         cv.setMouseCallback('Full Scene', mouse_click)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
-
-dataword = []
 
 while True:
     try:
@@ -170,7 +118,6 @@ while True:
 
         if len(line) == 2:
             cv.line(pic, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
-        # pic = cv.resize(pic,(1280,720))
         result_model = model.track(pic, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
@@ -178,9 +125,7 @@ while True:
             pix = e.xyxy.tolist()[0]
             id = int(e.id)
 
-
             if pix[0] > 500:
-
                         # CAR DETECTION
                 cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
@@ -224,12 +169,7 @@ while True:
 
                         if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
                             cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                            for x in range(10):
-                                print('cross')
-                                print('ID b '+str(id))
                             letterCheck(id)
-                            
-                            # plate(ppix,line,pix,id)
 
         cv.imshow('Full Scene', pic)
         if cv.waitKey(1) & 0xFF == ord('p'):
@@ -237,11 +177,13 @@ while True:
     except Exception as e:
         print(f'Error: {e}')
 
-# letterCheck()
+print('sdfsdfsdf ')
 print(cross_car)
+print('len cross_car '+str(len(cross_car)))
+print(id_cross)
+
 with open ('data.txt','w',encoding='utf-8')as file:
     file.write(str(dataword))
-print(len(cross_car))
 vdo.release()
 cv.destroyAllWindows()
 
