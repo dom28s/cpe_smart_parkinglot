@@ -13,7 +13,9 @@ model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 count =0
-vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+
 ret, pic = vdo.read()
 wordfull = ""
 
@@ -39,7 +41,6 @@ def mouse_click(event, x, y, flags, param,):
 
 def letterCheck():
     global wordfull
-
     max = 0
     datamax = 0
     for x in range(len(dataword)):
@@ -58,15 +59,6 @@ def letterCheck():
     print(wordfull)
 
 
-# def put_text_utf8(image, text, position, font_size=30, color=(0, 255, 0)):
-#     """Draw UTF-8 text on an OpenCV image using Pillow."""
-#     pil_img = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
-#     draw = ImageDraw.Draw(pil_img)
-#     font = ImageFont.truetype('arial.ttf', font_size)  # Ensure this font file supports UTF-8
-#     draw.text(position, text, font=font, fill=color)
-#     return cv.cvtColor(np.array(pil_img), cv.COLOR_RGB2BGR)
-
-
 pic2 = pic.copy()
 
 while check:
@@ -75,7 +67,6 @@ while check:
     cv.setMouseCallback('Full Scene', mouse_click)
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
-
 
 dataword = []
 
@@ -116,11 +107,6 @@ while True:
 
                 resultC = modelC(crop_plate, conf=0.5)
 
-                if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
-                    # pic = put_text_utf8(pic, wordfull, (904, 632), font_size=30, color=(0, 255, 0))
-                    cv.putText(pic, "dd", (904, 632), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-
                 wordf = []
                 for y in resultC[0].boxes:
                     mode = True
@@ -141,15 +127,15 @@ while True:
                 if len(wordf) != 0:
                     dataword.append(wordf.copy())
 
-
-
+                if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
+                    # pic = put_text_utf8(pic, wordfull, (904, 632), font_size=30, color=(0, 255, 0))
+                    cv.putText(pic, "dd", (904, 632), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     cv.imshow('Full Scene', pic)
-
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
 
-letterCheck(mode)
+letterCheck()
 
 vdo.release()
 cv.destroyAllWindows()
