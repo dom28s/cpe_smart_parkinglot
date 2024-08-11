@@ -5,7 +5,7 @@ k = int(input())
 
 for i in range(len(datasim)):
     for i2 in range(len(datasim[i])):
-        if datasim[i][i2][1] == id:
+        if datasim[i][i2][1] == k:
             car_id.append(datasim[i][i2])
-print
+print(car_id)
 

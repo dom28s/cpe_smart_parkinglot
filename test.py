@@ -18,8 +18,8 @@ count = 0
 skip_frames = 6
 frame_counter = 0
 
-vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 
 ret, pic = vdo.read()
 wordfull = ""
@@ -100,10 +100,10 @@ def letterCheck(id):
     print(' ')
 
     # Collect items with the matching id
-    for sublist in dataword:
-        for item in sublist:
-            if item[1] == id:
-                car_id.append(item,id)
+    for i in range(len(dataword)):
+        for i2 in range(len(dataword[i])):
+            if dataword[i][i2][1] == id:
+                car_id.append(dataword[i][i2])
 
     car_id = sorted(car_id, key=lambda x: x[2])
     print(car_id)
@@ -121,8 +121,6 @@ def letterCheck(id):
 
     # print(cross_car)
 
-
-
 # def plate(ppix,line,pix,id):
 #     print('plate start')
 #     print("len data"+str(len(dataword)))
@@ -135,8 +133,6 @@ def letterCheck(id):
     # print("car id "+str(car_id))
     # print(' ')
     
-
-
 
 if len(line) < 2:
     pic2 = pic.copy()
