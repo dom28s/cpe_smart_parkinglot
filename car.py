@@ -9,7 +9,6 @@ line = []
 vdo = cv.VideoCapture('vdo_from_park/topCam2.mp4')
 
 i,pic = vdo.read()
-pic = cv.resize(pic,(1920,1080))
 
 cv.namedWindow('frame', cv.WINDOW_NORMAL)
 cv.setWindowProperty('frame', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -22,8 +21,7 @@ i =0
 while True:
     pic2 = pic.copy()
     cv.putText(pic2,str(str(current_x) +" "+ str(current_y)),(0,50),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
-    # cv.putText(pic2,str(str(park)),(0,80),cv.FONT_HERSHEY_SIMPLEX,(2),(255,0,0),2)
-    
+
     
     for y in park:
         for x in y:

@@ -13,8 +13,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 
 check = True
 count = 0
@@ -28,7 +28,7 @@ cross_car =[]
 id_cross = set()
 dataword = []
 plateName =''
-
+datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 
@@ -57,33 +57,51 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 def letterCheck(id):
-    global wordfull,plateName,car_id,id_cross
+    global dataword,plateName,car_id,id_cross,datacar_in_park
+    word = {}
+    max = 0
+    indexmax = 0
+    for x in range(len(dataword)):
+        if len(dataword[x]) >= max:
+            max = len(dataword[x])
+            indexmax = x
+    for x in range(len(dataword[indexmax])):
+        word[x] = {"x" : dataword[indexmax][x][2],
+                   "word" : [[dataword[indexmax][x][0],1]]}
     
-    for i in range(len(dataword)):
-        for i2 in range(len(dataword[i])):
-            if dataword[i][i2][1] == id:
-                if len(id_cross)>0:
-                    for i3 in id_cross:
-                        if i3 == id:
-                            return
-                        else:
-                            car_id.append(dataword[i][i2])
-                else:
-                    car_id.append(dataword[i][i2])
-                    
-    car_id = sorted(car_id, key=lambda x: x[2])
+    print("===============================================")
+    print(word)
+    print("===============================================")
+    for x in dataword:
+        if x[0][1] == id:
+            for y in x:
+                for z in range(max):
+                    if y[2] > (word[z]["x"] - (word[z]["x"]*0.1)) and y[2] < (word[z]["x"] + (word[z]["x"]*0.1)):
+                        o = True
+                        for k in range(len(word[z]['word'])):
+                            if word[z]['word'][k][0] == y[0]:
+                                word[z]['word'][k][1] += 1
+                                o = False
+                                break
+                        if o:
+                            word[z]['word'].append([y[0],1])
+    finalword = ""
+    for z in range(max): 
+        maxd = 0
+        inmax = 0
+        for k in range(len(word[z]['word'])):
+            if word[z]['word'][k][1] > maxd:
+                maxd = word[z]['word'][k][1]
+                inmax = k
+        finalword += word[z]['word'][inmax][0]
+    print(finalword)                         
+            
+                
+                
 
-    for x in range(len(car_id)):
-        for x2 in range(len(car_id[x])):
-            plateName = plateName+str(car_id[x][0])
 
-    cross_car.append([plateName,timeNow,id])
-
-    for x in range(len(cross_car)):
-        for x2 in range(len(cross_car[x])):
-            id_cross.add(int(cross_car[x][2]))
-
-    car_id.clear()
+    
+    
 
 if len(line) < 2:
     pic2 = pic.copy()
@@ -165,12 +183,19 @@ while True:
                         print(letter_dic[cname])
                         cv.imshow('df', crop_plate)
                             
-                        if len(all_word) != 0:
-                            dataword.append(all_word.copy())
+                    if len(all_word) != 0:
+                        for x in range(len(all_word)):
+                            for y in range(len(all_word)):
+                                if all_word[x][2] < all_word[y][2]:
+                                    temp = all_word[y]
+                                    all_word[y] = all_word[x]
+                                    all_word[x] = temp
+                        print(all_word)
+                        dataword.append(all_word.copy())
 
-                        if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
-                            cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                            letterCheck(id)
+                    if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
+                        cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        letterCheck(id)
 
         cv.imshow('Full Scene', pic)
         if cv.waitKey(1) & 0xFF == ord('p'):
