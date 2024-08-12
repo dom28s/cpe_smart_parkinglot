@@ -28,7 +28,7 @@ cross_car =[]
 id_cross = set()
 dataword = []
 plateName =''
-
+datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 
@@ -57,33 +57,30 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 def letterCheck(id):
-    global wordfull,plateName,car_id,id_cross
+    global dataword,plateName,car_id,id_cross,datacar_in_park
+    word = []
+    max = 0
+    indexmax = 0
+    for x in range(dataword):
+        if len(dataword[x]) > max:
+            max = len(dataword[x])
+            indexmax = x
+    for x in dataword[indexmax]:
+        word.append(x)
+    print("===============================================")
+    print(word)
+    # for x in dataword:
+    #     if x[0][1] == id:
+    #         if len(word) == 0:
+    #             for y in x:
+
+            
+                
+                
+
+
     
-    for i in range(len(dataword)):
-        for i2 in range(len(dataword[i])):
-            if dataword[i][i2][1] == id:
-                if len(id_cross)>0:
-                    for i3 in id_cross:
-                        if i3 == id:
-                            return
-                        else:
-                            car_id.append(dataword[i][i2])
-                else:
-                    car_id.append(dataword[i][i2])
-                    
-    car_id = sorted(car_id, key=lambda x: x[2])
-
-    for x in range(len(car_id)):
-        for x2 in range(len(car_id[x])):
-            plateName = plateName+str(car_id[x][0])
-
-    cross_car.append([plateName,timeNow,id])
-
-    for x in range(len(cross_car)):
-        for x2 in range(len(cross_car[x])):
-            id_cross.add(int(cross_car[x][2]))
-
-    car_id.clear()
+    
 
 if len(line) < 2:
     pic2 = pic.copy()
@@ -163,9 +160,15 @@ while True:
                         cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                         cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
                         print(letter_dic[cname])
-                        cv.imshow('df', crop_plate)
+                        # cv.imshow('df', crop_plate)
                             
                         if len(all_word) != 0:
+                            for x in range(len(all_word)):
+                                for y in range(len(all_word)):
+                                    if all_word[x][2] < all_word[y][2]:
+                                        temp = all_word[y][2]
+                                        all_word[y][2] = all_word[x][2]
+                                        all_word[x][2] = temp
                             dataword.append(all_word.copy())
 
                         if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
