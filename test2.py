@@ -1,25 +1,90 @@
-from datetime import datetime
+from ultralytics import YOLO
+import cv2 as cv
+import numpy as np
+
+model = YOLO('model/yolov10l.pt')
+
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/topCam.mp4') # Uncomment this line if using a video file
+
+frame_counter = 0
+skip_frames = 15
+
+cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+
+# color definitions
+green = (0, 255, 0)  # empty
+red = (0, 0, 255)    # not empty
+blue = (255, 0, 0)   # unknown
+yellow = (0, 255, 255)  # undefined occupancy
+
+# Variables for drawing
+points = []
+park =[]
+max_points = 4
+start_point = None
+check = True
+
+def draw_shape(event, x, y, flags, param):
+    global  points, start_point, check,park
+    if event == cv.EVENT_LBUTTONDOWN:
+            points.append((x,y))
+            print(str(x) +str(y))
+            print(points)
+                
+            if len(points) == max_points:
+                points.append(points[0]) 
+                park.append(points.copy())
+                print(park)
 
 
+ret, pic = vdo.read()
+pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+while check:
+    cv.imshow("Full Scene", pic)
+    cv.setMouseCallback('Full Scene', draw_shape)
 
-dataword = [[['ร', 2, 172.4899139404297]], [['ก', 2, 82.48542785644531]], [['1', 2, 293.5115051269531]], [['ก', 2, 80.08556365966797]], [['1', 2, 279.50482177734375], ['ก', 2, 75.39144134521484]], [['ก', 2, 92.42958068847656], ['1', 2, 292.2705078125], ['จ', 2, 172.0551300048828], ['ชลบุรี', 2, 10000]], [['ก', 2, 88.27404022216797], ['1', 2, 292.1700744628906]], [['ก', 2, 88.0572280883789], ['จ', 2, 168.6925811767578], ['1', 2, 289.2565612792969], ['ชลบุรี', 2, 10000]], [['ก', 2, 88.43093872070312], ['1', 2, 285.21307373046875], ['4', 2, 333.5153503417969], ['จ', 2, 168.36509704589844], ['4', 2, 394.28350830078125]], [['ก', 2, 89.87152099609375], ['จ', 2, 167.05992126464844], ['1', 2, 285.0230407714844], ['4', 2, 394.43914794921875], ['4', 2, 333.2618713378906]], [['จ', 2, 149.87002563476562], ['ก', 2, 71.75729370117188]], [['ก', 2, 36.32527160644531], ['1', 2, 245.65956115722656]], [['ย', 4, 119.02238464355469]], [['ย', 4, 118.4530258178711]], [['ร', 4, 402.3605651855469]], [['บ', 4, 129.23727416992188]], [['บ', 4, 115.13008117675781]]]
-car_id = []
-test =[]
-timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
-id = int(input())
-plateName =''
-cross_car =[]
+    if len(points) == max_points + 1:  # Polygon is closed with 4 points + 1 to close
+        print(points)
+        overlay = pic.copy()
+        points_array = np.array(points, np.int32)
+        cv.fillPoly(overlay, [points_array], yellow)  # Fill with yellow color
+        alpha = 0.5  # Transparency level
+        pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
+        cv.imshow("Full Scene", pic2)
+        cv.waitKey(0)
+        check = False  # Exit the drawing loop after completing one shape
+
+    if cv.waitKey(1) & 0xFF == ord('p'):
+        break
+
+while True:
+    ret, pic = vdo.read()
+    if not ret:
+        break
+
+    pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+
+    frame_counter += 1
+    if frame_counter % (skip_frames + 1) != 0:
+        continue
+
+    result = model.track(pic, conf=0.5, persist=1)
+
+    for x in result[0].boxes:
+        name = result[0].names[int(x.cls)]
+        pix = x.xyxy.tolist()[0]
+        id = int(x.id)
+
+        cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+        cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
+
+    cv.imshow('Full Scene', pic)
+
+    if cv.waitKey(1) & 0xFF == ord('p'):
+        break
 
 
-for i in range(len(dataword)):
-    for i2 in range(len(dataword[i])):
-        if dataword[i][i2][1] == id:
-            car_id.append(dataword[i][i2])
-
-car_id = sorted(car_id, key=lambda x: x[2])
-print(car_id)
-
-for x in range(len(car_id)):
-    for x2 in range(len(car_id[x])):
-        plateName = plateName+str(car_id[x][0])
-cross_car.append([plateName,timeNow])
+vdo.release()
+cv.destroyAllWindows()

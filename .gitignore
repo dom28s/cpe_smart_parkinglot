@@ -2,3 +2,4 @@ vdo_from_park/*.MOV
 vdo_from_park/topCam2.mp4
 model/thaiChar_100b.pt
 images/*.jpg
+vdo_from_park/topCam.mp4

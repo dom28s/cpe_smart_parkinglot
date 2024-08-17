@@ -7,14 +7,15 @@ import numpy as np
 import time
 from datetime import datetime
 
+
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 check = True
 count = 0
@@ -31,6 +32,7 @@ plateName =''
 datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
+x_pos = 800
 
 timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
 print(timeNow)
@@ -94,14 +96,9 @@ def letterCheck(id):
                 maxd = word[z]['word'][k][1]
                 inmax = k
         finalword += word[z]['word'][inmax][0]
-    print(finalword)                         
+    print(finalword)
+    cross_car.append(finalword)                         
             
-                
-                
-
-
-    
-    
 
 if len(line) < 2:
     pic2 = pic.copy()
@@ -119,6 +116,7 @@ while True:
             print("Failed to read frame. Exiting...")
             break
 
+        pic_black = pic.copy()
         fps_frame_count += 1
 
         if time.time() - fps_start_time >= 1.0:  # Update FPS every second
@@ -128,8 +126,11 @@ while True:
         else:
             fps = fps_frame_count
 
-        cv.putText(pic, f"FPS: {fps}", (5, 60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv.rectangle(pic_black, (0, 0), (x_pos, pic_black.shape[0]), (0, 0, 0), thickness=cv.FILLED)
+        cv.putText(pic, f"FPS: {fps}", (5, 90), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv.putText(pic, "Press P To Exit", (5,30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         frame_counter += 1
         if frame_counter % (skip_frames + 1) != 0:
@@ -137,7 +138,7 @@ while True:
 
         if len(line) == 2:
             cv.line(pic, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
-        result_model = model.track(pic, conf=0.5, classes=2, persist=True)
+        result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
@@ -149,7 +150,7 @@ while True:
                 cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
 
-                crop_car = pic[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
+                crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
                 resultP = modelP(crop_car, conf=0.5)
 
                         # PLATE DETECTION
@@ -200,17 +201,17 @@ while True:
         cv.imshow('Full Scene', pic)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
+
     except Exception as e:
         print(f'Error: {e}')
 
 print('sdfsdfsdf ')
 print(cross_car)
 print('len cross_car '+str(len(cross_car)))
-print(id_cross)
+
+
 
 with open ('data.txt','w',encoding='utf-8')as file:
     file.write(str(dataword))
 vdo.release()
 cv.destroyAllWindows()
-
-
