@@ -7,14 +7,15 @@ import numpy as np
 import time
 from datetime import datetime
 
+
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 check = True
 count = 0
@@ -98,12 +99,6 @@ def letterCheck(id):
     print(finalword)
     cross_car.append(finalword)                         
             
-                
-                
-
-
-    
-    
 
 if len(line) < 2:
     pic2 = pic.copy()
@@ -132,8 +127,10 @@ while True:
             fps = fps_frame_count
 
         cv.rectangle(pic_black, (0, 0), (x_pos, pic_black.shape[0]), (0, 0, 0), thickness=cv.FILLED)
-        cv.putText(pic, f"FPS: {fps}", (5, 60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv.putText(pic, f"FPS: {fps}", (5, 90), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv.putText(pic, "Press P To Exit", (5,30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         frame_counter += 1
         if frame_counter % (skip_frames + 1) != 0:
@@ -204,6 +201,7 @@ while True:
         cv.imshow('Full Scene', pic)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
+
     except Exception as e:
         print(f'Error: {e}')
 
