@@ -14,6 +14,7 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
@@ -33,6 +34,8 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 x_pos = 800
+
+x_threshold=800
 
 timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
 print(timeNow)
@@ -97,7 +100,7 @@ def letterCheck(id):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
-    cross_car.append(finalword)                         
+    cross_car.append([finalword,timeNow])                         
             
 
 if len(line) < 2:
@@ -125,9 +128,9 @@ while True:
             fps_start_time = time.time()
         else:
             fps = fps_frame_count
-
-        cv.rectangle(pic_black, (0, 0), (x_pos, pic_black.shape[0]), (0, 0, 0), thickness=cv.FILLED)
-        cv.putText(pic, f"FPS: {fps}", (5, 90), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        
+        cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
+        cv.putText(pic, f"FPS: {fps}", (5, 60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv.putText(pic, "Press P To Exit", (5,30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -144,68 +147,66 @@ while True:
             name = result_model[0].names[int(e.cls)]
             pix = e.xyxy.tolist()[0]
             id = int(e.id)
-
-            if pix[0] > 500:
                         # CAR DETECTION
-                cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
+            cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
 
-                crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
-                resultP = modelP(crop_car, conf=0.5)
+            crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
+            resultP = modelP(crop_car, conf=0.5)
 
                         # PLATE DETECTION
-                for x in resultP[0].boxes:
-                    pname = resultP[0].names[int(x.cls)]
-                    ppix = x.xyxy.tolist()[0]
+            for x in resultP[0].boxes:
+                pname = resultP[0].names[int(x.cls)]
+                ppix = x.xyxy.tolist()[0]
 
-                    cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
+                cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
 
-                    crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
-                    crop_plate = cv.resize(crop_plate, (320, 250))
+                crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
+                crop_plate = cv.resize(crop_plate, (320, 250))
                             # crop_plate = upscale_image(crop_plate)
-                    resultC = modelC(crop_plate, conf=0.5)
+                resultC = modelC(crop_plate, conf=0.5)
 
-                    all_word = []
+                all_word = []
 
                             # LETTER DETECTION
-                    for y in resultC[0].boxes:
-                        cname = resultC[0].names[int(y.cls)]
-                        cpix = y.xyxy.tolist()[0]
-                        try:
-                            if len(letter_dic[str(cname)]) > 2:
-                                all_word.append([letter_dic[str(cname)], id, 10000])
-                            else:
-                                all_word.append([letter_dic[str(cname)], id, cpix[0]])
+                for y in resultC[0].boxes:
+                    cname = resultC[0].names[int(y.cls)]
+                    cpix = y.xyxy.tolist()[0]
+                    try:
+                        if len(letter_dic[str(cname)]) > 2:
+                            all_word.append([letter_dic[str(cname)], id, 10000])
+                        else:
+                            all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
-                        except KeyError:
-                            print("Key not found in data dictionary")
-                        cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
-                        print(letter_dic[cname])
-                        cv.imshow('df', crop_plate)
+                    except KeyError:
+                        print("Key not found in data dictionary")
+                    cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
+                    print(letter_dic[cname])
+                    cv.imshow('df', crop_plate)
                             
-                    if len(all_word) != 0:
-                        for x in range(len(all_word)):
-                            for y in range(len(all_word)):
-                                if all_word[x][2] < all_word[y][2]:
-                                    temp = all_word[y]
-                                    all_word[y] = all_word[x]
-                                    all_word[x] = temp
-                        print(all_word)
-                        dataword.append(all_word.copy())
+                if len(all_word) != 0:
+                    for x in range(len(all_word)):
+                        for y in range(len(all_word)):
+                            if all_word[x][2] < all_word[y][2]:
+                                temp = all_word[y]
+                                all_word[y] = all_word[x]
+                                all_word[x] = temp
+                    print(all_word)
+                    dataword.append(all_word.copy())
 
-                    if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
-                        cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                        letterCheck(id)
+                if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
+                    cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    letterCheck(id)
 
-        cv.imshow('Full Scene', pic)
+        cv.imshow('Full Scene', pic_black)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
 
     except Exception as e:
         print(f'Error: {e}')
 
-print('sdfsdfsdf ')
+print('_______ ')
 print(cross_car)
 print('len cross_car '+str(len(cross_car)))
 
