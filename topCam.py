@@ -29,7 +29,6 @@ check = True
 x_threshold = 400
 
 
-
 # Function to load park data from JSON file
 def load_park_from_json(filename):
     global park

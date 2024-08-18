@@ -1,6 +1,5 @@
 from ultralytics import YOLO
 import cv2 as cv
-import pyautogui
 import json
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -103,7 +102,6 @@ def letterCheck(id):
 if len(line) < 2:
     pic2 = pic.copy()
     while check:
-        x, y = pyautogui.position()
         cv.imshow("Full Scene", pic2)
         cv.setMouseCallback('Full Scene', mouse_click)
         if cv.waitKey(1) & 0xFF == ord('p'):
