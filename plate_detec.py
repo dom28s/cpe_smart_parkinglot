@@ -12,7 +12,7 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 
 check = True
@@ -31,7 +31,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 
-x_threshold=800
+x_threshold=700
 
 timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
 print(timeNow)
@@ -158,6 +158,7 @@ while True:
 
                     crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
                     crop_plate = cv.resize(crop_plate, (320, 250))
+
                             # crop_plate = upscale_image(crop_plate)
                     resultC = modelC(crop_plate, conf=0.5)
 

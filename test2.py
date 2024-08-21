@@ -1,90 +1,72 @@
-from ultralytics import YOLO
 import cv2 as cv
+from ultralytics import YOLO
+import json
 import numpy as np
 
-model = YOLO('model/yolov10l.pt')
+# Load YOLO models
+model = YOLO('model/yolov8n.pt')
 
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/topCam.mp4') # Uncomment this line if using a video file
+# Load video
+vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 
-frame_counter = 0
-skip_frames = 15
-
-cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
-
-# color definitions
-green = (0, 255, 0)  # empty
-red = (0, 0, 255)    # not empty
-blue = (255, 0, 0)   # unknown
-yellow = (0, 255, 255)  # undefined occupancy
-
-# Variables for drawing
-points = []
-park =[]
-max_points = 4
-start_point = None
-check = True
-
-def draw_shape(event, x, y, flags, param):
-    global  points, start_point, check,park
-    if event == cv.EVENT_LBUTTONDOWN:
-            points.append((x,y))
-            print(str(x) +str(y))
-            print(points)
-                
-            if len(points) == max_points:
-                points.append(points[0]) 
-                park.append(points.copy())
-                print(park)
-
-
-ret, pic = vdo.read()
-pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
-while check:
-    cv.imshow("Full Scene", pic)
-    cv.setMouseCallback('Full Scene', draw_shape)
-
-    if len(points) == max_points + 1:  # Polygon is closed with 4 points + 1 to close
-        print(points)
-        overlay = pic.copy()
-        points_array = np.array(points, np.int32)
-        cv.fillPoly(overlay, [points_array], yellow)  # Fill with yellow color
-        alpha = 0.5  # Transparency level
-        pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
-        cv.imshow("Full Scene", pic2)
-        cv.waitKey(0)
-        check = False  # Exit the drawing loop after completing one shape
-
-    if cv.waitKey(1) & 0xFF == ord('p'):
-        break
+# Initialize variables for tracking
+trackers = cv.MultiTracker_create()
+track_ids = {}
+tracker_id = 0
+direction_lines = []
 
 while True:
-    ret, pic = vdo.read()
+    ret, frame = vdo.read()
     if not ret:
         break
 
-    pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+    # Object detection
+    result_model = model(frame, conf=0.5, classes=2)
+    detections = result_model[0].boxes
 
-    frame_counter += 1
-    if frame_counter % (skip_frames + 1) != 0:
-        continue
+    # Update trackers
+    success, boxes = trackers.update(frame)
 
-    result = model.track(pic, conf=0.5, persist=1)
+    # Draw direction lines
+    for line in direction_lines:
+        cv.line(frame, line[0], line[1], (0, 255, 0), 2)
 
-    for x in result[0].boxes:
-        name = result[0].names[int(x.cls)]
-        pix = x.xyxy.tolist()[0]
-        id = int(x.id)
+    for box in detections:
+        name = result_model[0].names[int(box.cls)]
+        pix = box.xyxy.tolist()[0]
 
-        cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-        cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
+        # Create a new tracker for the detected car
+        tracker = cv.TrackerKCF_create()
+        bbox = (int(pix[0]), int(pix[1]), int(pix[2]) - int(pix[0]), int(pix[3]) - int(pix[1]))
+        trackers.add(tracker, frame, bbox)
 
-    cv.imshow('Full Scene', pic)
+        # Draw detection bounding box
+        cv.putText(frame, "%s " % str(name), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.rectangle(frame, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
 
-    if cv.waitKey(1) & 0xFF == ord('p'):
+    # Draw tracking bounding boxes
+    for i, box in enumerate(boxes):
+        p1 = (int(box[0]), int(box[1]))
+        p2 = (int(box[0] + box[2]), int(box[1] + box[3]))
+        cv.rectangle(frame, p1, p2, (255, 0, 0), 2)
+        
+        # Calculate and draw direction if necessary
+        # Assuming you have a function to check if a car passed a specific region
+        if car_passed_region(p1, p2):
+            direction_line = ((p1[0], p1[1]), (p2[0], p2[1]))
+            direction_lines.append(direction_line)
+            cv.line(frame, direction_line[0], direction_line[1], (0, 255, 255), 2)
+
+    # Display results
+    cv.imshow('Car Tracking and Direction', frame)
+    
+    if cv.waitKey(1) & 0xFF == ord('q'):
         break
-
 
 vdo.release()
 cv.destroyAllWindows()
+
+def car_passed_region(p1, p2):
+    # Implement logic to determine if the car has passed a specific region
+    # This function should return True if the car has passed the region
+    return False

@@ -7,7 +7,7 @@ import os
 model = YOLO('model/yolov8l.pt')
 
 # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')  # Uncomment this line if using a video file
+vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')  
 
 frame_counter = 0
 skip_frames = 15
@@ -15,21 +15,17 @@ skip_frames = 15
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
-# color definitions
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
 blue = (255, 0, 0)   # unknown
 yellow = (0, 255, 255)  # undefined occupancy
 
-# Variables for drawing
 points = []
 park = []
 max_points = 4
 check = True
 x_threshold = 400
 
-
-# Function to load park data from JSON file
 def load_park_from_json(filename):
     global park
     if os.path.exists(filename):
@@ -37,7 +33,7 @@ def load_park_from_json(filename):
             park_data = json.load(f)
             park = [np.array(shape, np.int32) for shape in park_data]
 
-# Function to save park data to JSON file
+
 def save_park_to_json(filename):
     park_data = []
     for shape in park:
@@ -45,7 +41,7 @@ def save_park_to_json(filename):
     with open(filename, 'w') as f:
         json.dump(park_data, f)
 
-# Function to handle mouse events
+
 def draw_shape(event, x, y, flags, param):
     global points, park
     if event == cv.EVENT_LBUTTONDOWN:
@@ -57,10 +53,9 @@ def draw_shape(event, x, y, flags, param):
             points.clear()
             save_park_to_json('park.json')  # Save polygons after adding a new one
 
-# Load existing park polygons if they exist
+
 load_park_from_json('park.json')
 
-# Read the first frame to set up the drawing
 ret, pic = vdo.read()
 pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
@@ -96,6 +91,38 @@ while True:
 
     result = model.track(pic_de, conf=0.5, persist=1)
 
+    overlay = pic.copy()
+
+    for shape in park:
+        points_array = shape.reshape((-1, 1, 2))
+
+        # Calculate the area of the parking space
+        parking_area = cv.contourArea(points_array)
+
+        is_occupied = False
+
+        for box in result[0].boxes:
+            x_min, y_min, x_max, y_max = map(int, box.xyxy.tolist()[0])
+            bbox_points = np.array([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)], np.int32)
+
+            # Find the intersection area between the parking space and the bounding box
+            intersection_area = cv.intersectConvexConvex(points_array, bbox_points)[0]
+
+            # Calculate the percentage of overlap
+            overlap_percentage = intersection_area / parking_area
+
+            # Check if the overlap is greater than 50%
+            if overlap_percentage > 0.2:
+                is_occupied = True
+                break
+
+        # Set the color based on occupancy
+        poly_color = red if is_occupied else green
+        cv.fillPoly(overlay, [points_array], poly_color)
+
+    alpha = 0.5
+    cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
+
     for x in result[0].boxes:
         name = result[0].names[int(x.cls)]
         pix = x.xyxy.tolist()[0]
@@ -103,16 +130,6 @@ while True:
 
         cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
         cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
-
-    # Create an overlay for transparency
-    overlay = pic.copy()
-
-    # Draw saved polygons on the overlay
-    for shape in park:
-        cv.fillPoly(overlay, [shape.reshape((-1, 1, 2))], yellow)  # Ensure correct shape for fillPoly
-
-    alpha = 0.5
-    cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
 
     cv.imshow('Full Scene', pic)
 

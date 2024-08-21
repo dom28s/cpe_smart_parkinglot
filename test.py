@@ -14,11 +14,11 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/G9.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 check = True
+check2 = True
 count = 0
 skip_frames = 7
 frame_counter = 0
@@ -33,18 +33,24 @@ plateName =''
 datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
-x_pos = 800
+line = []
 
-x_threshold=800
+green = (0, 255, 0)  # empty
+red = (0, 0, 255)    # not empty
+blue = (255, 0, 0)   # unknown
+yellow = (0, 255, 255)  # undefined occupancy
+
+
+x_threshold=500
 
 timeNow = datetime.now().strftime("%H:%M %d-%m-%Y")
 print(timeNow)
 
 try:
     with open('line.json', 'r') as f:
-        line = json.load(f)
+        allline = json.load(f)
 except FileNotFoundError:
-    line = []
+    allline = []
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -56,10 +62,16 @@ def mouse_click(event, x, y, flags, param):
         cv.putText(pic2, f'{x} {y}', (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         if len(line) == 2:
             cv.line(pic2, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
-            with open('line.json', 'w') as f:
-                json.dump(line, f)
+            allline.append(line.copy())
+            line.clear()
+
+            if (len(allline)) ==2:
+                with open('line.json', 'w') as f:
+                    json.dump(allline, f)
+                check = False
     if event == cv.EVENT_RBUTTONDOWN:
         check = False
+
 
 def letterCheck(id):
     global dataword,plateName,car_id,id_cross,datacar_in_park
@@ -100,11 +112,36 @@ def letterCheck(id):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
-    cross_car.append([finalword,timeNow])                         
-            
+    cross_car.append([finalword,timeNow]) 
 
-if len(line) < 2:
-    pic2 = pic.copy()
+def is_line_intersecting_bbox(car, line):
+    x1, y1, x2, y2 = car
+    print(car)
+    (x3, y3), (x4, y4) = line
+
+    edges = [
+        ((x1, y1), (x2, y1)),  # Top
+        ((x2, y1), (x2, y2)),  # Right
+        ((x2, y2), (x1, y2)),  # Bottom
+        ((x1, y2), (x1, y1))   # Left
+    ]
+
+    for edge in edges:
+        if do_intersect(edge, line):
+            return True
+    return False
+
+def do_intersect(line1, line2):
+    def ccw(A, B, C):
+        return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+    (A, B), (C, D) = line1, line2
+    return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
+                        
+            
+pic2 = pic.copy()
+
+if len(allline) < 2 :
     while check:
         x, y = pyautogui.position()
         cv.imshow("Full Scene", pic2)
@@ -112,6 +149,12 @@ if len(line) < 2:
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
 
+print(allline)
+carhit = {
+    "CarID" : [],
+    "Time" : []
+}
+carinpark = []
 while True:
     try:
         ret, pic = vdo.read()
@@ -121,6 +164,9 @@ while True:
 
         pic_black = pic.copy()
         fps_frame_count += 1
+        frame_counter += 1
+        if frame_counter % (skip_frames + 1) != 0:
+            continue
 
         if time.time() - fps_start_time >= 1.0:  # Update FPS every second
             fps = fps_frame_count
@@ -135,18 +181,22 @@ while True:
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-        frame_counter += 1
-        if frame_counter % (skip_frames + 1) != 0:
-            continue
+        line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
+        line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
 
-        if len(line) == 2:
-            cv.line(pic, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
+        cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)
+        cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
+
+        
+
         result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
             pix = e.xyxy.tolist()[0]
             id = int(e.id)
+            car = (int(pix[0]), int(pix[1]), int(pix[2]), int(pix[3]))
+
                         # CAR DETECTION
             cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
@@ -158,16 +208,21 @@ while True:
             for x in resultP[0].boxes:
                 pname = resultP[0].names[int(x.cls)]
                 ppix = x.xyxy.tolist()[0]
-
                 cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
 
                 crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
                 crop_plate = cv.resize(crop_plate, (320, 250))
-                            # crop_plate = upscale_image(crop_plate)
+
+                # gray_image = cv.cvtColor(crop_plate, cv.COLOR_BGR2GRAY)
+                # blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
+                # _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+                # binary_image_3channel = cv.merge([binary_image, binary_image, binary_image])
+
+                # resultC = modelC(binary_image_3channel, conf=0.5)
+
                 resultC = modelC(crop_plate, conf=0.5)
 
                 all_word = []
-
                             # LETTER DETECTION
                 for y in resultC[0].boxes:
                     cname = resultC[0].names[int(y.cls)]
@@ -180,9 +235,16 @@ while True:
 
                     except KeyError:
                         print("Key not found in data dictionary")
+
+                    # cv.putText(binary_image_3channel, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    # cv.rectangle(binary_image_3channel, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
+                    
                     cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
+
                     print(letter_dic[cname])
+
+                    # cv.imshow('df', binary_image_3channel)
                     cv.imshow('df', crop_plate)
                             
                 if len(all_word) != 0:
@@ -195,11 +257,27 @@ while True:
                     print(all_word)
                     dataword.append(all_word.copy())
 
-                if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
-                    cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                    letterCheck(id)
+                # if ppix[0] + pix[0] <= line[0][0] and ppix[2] + pix[0] <= line[0][0]:
+                #     cv.putText(pic, "cross", (904, 1002), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                #     letterCheck(id)
 
-        cv.imshow('Full Scene', pic_black)
+
+                if is_line_intersecting_bbox(car, line1):
+                    if not id in carhit['CarID']:
+                        carhit['CarID'].append(id)
+                        carhit['Time'].append(time.time())
+                    else:
+                        carhit['Time'][carhit['CarID'].index(id)] = time.time()
+                    cv.putText(pic, "hit", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                if is_line_intersecting_bbox(car, line2):
+                    if id in carhit['CarID']:
+                        carinpark.append(id)
+                        carhit['Time'].pop(carhit['CarID'].index(id))
+                        carhit['CarID'].remove(id)
+
+                    cv.putText(pic, "hit", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+        cv.imshow('Full Scene', pic)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
 
@@ -210,7 +288,7 @@ print('_______ ')
 print(cross_car)
 print('len cross_car '+str(len(cross_car)))
 
-
+print(carinpark)
 
 with open ('data.txt','w',encoding='utf-8')as file:
     file.write(str(dataword))
