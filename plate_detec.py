@@ -17,7 +17,7 @@ vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 
 check = True
 count = 0
-skip_frames = 7
+skip_frames = 15
 frame_counter = 0
 
 ret, pic = vdo.read()
