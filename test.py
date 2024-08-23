@@ -23,7 +23,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 8
+skip_frames = 7
 frame_counter = 0
 
 wordfull = ""
@@ -44,11 +44,9 @@ red = (0, 0, 255)    # not empty
 blue = (255, 0, 0)   # unknown
 yellow = (0, 255, 255)  # undefined occupancy
 
-carhit = {
-    "CarID" : [],
-    "Time" : []
-}
+carhit = []
 carinpark = []
+car_hascross=[]
 
 
 try:
@@ -76,54 +74,13 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 
-# def letterCheck(id):
-#     global dataword,plateName,car_id,id_cross,datacar_in_park
-#     word = {}
-#     max = 0
-#     indexmax = 0
-#     for x in range(len(dataword)):
-#         if len(dataword[x]) >= max:
-#             max = len(dataword[x])
-#             indexmax = x
-#     for x in range(len(dataword[indexmax])):
-#         word[x] = {"x" : dataword[indexmax][x][2],
-#                    "word" : [[dataword[indexmax][x][0],1]]}
-#     print("===============================================")
-#     print(word)
-#     print("===============================================")
-#     for x in dataword:
-#         if x[0][1] == id:
-#             for y in x:
-#                 for z in range(max):
-#                     if y[2] > (word[z]["x"] - (word[z]["x"]*0.1)) and y[2] < (word[z]["x"] + (word[z]["x"]*0.1)):
-#                         o = True
-#                         for k in range(len(word[z]['word'])):
-#                             if word[z]['word'][k][0] == y[0]:
-#                                 word[z]['word'][k][1] += 1
-#                                 o = False
-#                                 break
-#                         if o:
-#                             word[z]['word'].append([y[0],1])
-#     finalword = ""
-#     for z in range(max): 
-#         maxd = 0
-#         inmax = 0
-#         for k in range(len(word[z]['word'])):
-#             if word[z]['word'][k][1] > maxd:
-#                 maxd = word[z]['word'][k][1]
-#                 inmax = k
-#         finalword += word[z]['word'][inmax][0]
-#     print(finalword)
-#     cross_car.append([finalword,timeNow]) 
-
-
 def letterCheck(id):
     global dataword,plateName,car_id,id_cross,datacar_in_park
     word = {}
     max = 0
     indexmax = 0
     for x in range(len(dataword)):
-        if len(dataword[x]) >= max:
+        if len(dataword[x]) >= max and dataword[x][0][1] == id:
             max = len(dataword[x])
             indexmax = x
     for x in range(len(dataword[indexmax])):
@@ -155,11 +112,7 @@ def letterCheck(id):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
-    for x in range(len(crop_car)):
-        if id in cross_car[x][0]:
-            print('al add')
-        else:
-            cross_car.append([id,finalword,timeNow]) 
+    cross_car.append([finalword,timeNow]) 
 
 
 
@@ -185,13 +138,6 @@ def do_intersect(line1, line2):
 
     (A, B), (C, D) = line1, line2
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
-                        
-
-def check():
-    global carhit
-    print(carhit)
-
-
 
 
 ret, pic = vdo.read()
@@ -203,10 +149,6 @@ if len(allline) < 2 :
         cv.setMouseCallback('Full Scene', mouse_click)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
-
-
-carhit_test =[]
-carhit_test2=[]
 
 while True:
     try:
@@ -302,6 +244,7 @@ while True:
                                 all_word[x] = temp
                     print(all_word)
                     dataword.append(all_word.copy())
+                    
 
 
                 # if is_line_intersecting_bbox(car, line1):
@@ -321,10 +264,13 @@ while True:
                         # cv.putText(pic, "hit 2", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit_test:
-                        carhit_test.append(id)
-                if is_line_intersecting_bbox(car, line1):
-                    for x in carhit_test:
+                    if not id in carhit:
+                        carhit.append(id)
+                        cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+                if is_line_intersecting_bbox(car, line2):
+                    cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    for x in carhit:
                         if x == id:
                             letterCheck(id)
                             
@@ -342,10 +288,12 @@ print('_______ ')
 print(cross_car)
 print('_______ ')
 # print('len cross_car '+str(len(cross_car)))
-print('car hit test '+str(carhit_test))
+print('car hit test '+str(carhit))
 print(carinpark)
 
 with open ('data.txt','w',encoding='utf-8')as file:
     file.write(str(dataword))
 vdo.release()
 cv.destroyAllWindows()
+
+
