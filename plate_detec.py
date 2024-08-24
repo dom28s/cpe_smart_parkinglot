@@ -113,6 +113,7 @@ def letterCheck(id):
         finalword += word[z]['word'][inmax][0]
     print(finalword)
     cross_car.append([finalword,timeNow]) 
+    car_hascross.append(id)
 
 
 
@@ -246,23 +247,6 @@ while True:
                     dataword.append(all_word.copy())
                     
 
-
-                # if is_line_intersecting_bbox(car, line1):
-                #     if not id in carhit['CarID']:
-                #         carhit['CarID'].append(id)
-                #         carhit['Time'].append(time.time())
-                #     else:
-                #         carhit['Time'][carhit['CarID'].index(id)] = time.time()
-                #     print(carhit)
-                #     cv.putText(pic, "hit 1", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-                # if is_line_intersecting_bbox(car, line2):
-                #     if id in carhit['CarID']:
-                #         carinpark.append(id)
-                #         carhit['Time'].pop(carhit['CarID'].index(id))
-                #         carhit['CarID'].remove(id)
-                        # cv.putText(pic, "hit 2", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
                 if is_line_intersecting_bbox(car, line1):
                     if not id in carhit:
                         carhit.append(id)
@@ -286,10 +270,8 @@ while True:
 
 print('_______ ')
 print(cross_car)
+print('car that has cross : '+str(car_hascross))
 print('_______ ')
-# print('len cross_car '+str(len(cross_car)))
-print('car hit test '+str(carhit))
-print(carinpark)
 
 with open ('data.txt','w',encoding='utf-8')as file:
     file.write(str(dataword))
