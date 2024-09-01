@@ -6,6 +6,8 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import time
 from datetime import datetime
+import mysql.connector
+
 
 
 with open('class.json', 'r', encoding='utf-8') as file:

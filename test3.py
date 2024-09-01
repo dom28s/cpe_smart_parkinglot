@@ -6,34 +6,31 @@ from shapely.geometry import Polygon
 from shapely.ops import unary_union
 from ultralytics import YOLO
 
-# โหลดโมเดล YOLO
-model = YOLO('model/yolov8n.pt')
+model = YOLO('model/yolov8l.pt')
 
-# เปิดกล้อง
-vdo = cv.VideoCapture(0)  
-
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')  
 
 frame_counter = 0
-skip_frames = 7
-check = True
+skip_frames = 15
 
-# ตั้งค่าหน้าต่างสำหรับการแสดงผล
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
-# กำหนดสีสำหรับแสดงผล
-green = (0, 255, 0)  # ว่าง
-red = (0, 0, 255)    # ไม่ว่าง
-blue = (255, 0, 0)   # ไม่ทราบ
-yellow = (0, 255, 255)  # ความจุไม่แน่นอน
+green = (0, 255, 0)  # empty
+red = (0, 0, 255)    # not empty
+blue = (255, 0, 0)   # unknown
+yellow = (0, 255, 255)  # undefined occupancy
 
-points = []  # เก็บพ้อยที่ใช้ในการวาดพอลิกอน
-park = []    # เก็บพอลิกอนที่ระบุพื้นที่จอดรถ
+points = []
+park = []
+park_data = []
+max_points = 4
 check = True
-park_data=  []
+x_threshold = 400
 
 def load_park_from_json(filename):
-    global park,park_data
+    global park
     if os.path.exists(filename):
         with open(filename, 'r') as f:
             park_data = json.load(f)
@@ -41,13 +38,9 @@ def load_park_from_json(filename):
 
 
 def save_park_to_json(filename):
-    global park_data 
+    global park_data
     for shape in park:
-        points = []
-        for p in shape:
-            points.append([int(p[0]), int(p[1])])
-        park_data.append(points)
-
+        park_data.append([[int(p[0]), int(p[1])] for p in shape])
     with open(filename, 'w') as f:
         json.dump(park_data, f)
 
@@ -57,25 +50,26 @@ def draw_shape(event, x, y, flags, param):
     if event == cv.EVENT_LBUTTONDOWN:
         points.append((x, y))
         print(points)
-        if len(points) == 4:
+        if len(points) == max_points:
             points.append(points[0])  # Close the polygon
             park.append(np.array(points, np.int32))  # Convert to NumPy array
             points.clear()
-            save_park_to_json('line_test.json')  # Save polygons after adding a new one
+            save_park_to_json('park.json')  # Save polygons after adding a new one
 
 
-load_park_from_json('line_test.json')
+load_park_from_json('park.json')
 
 ret, pic = vdo.read()
-pic = cv.flip(pic, 1)  # พลิกภาพจากซ้ายไปขวา
+pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
 while check:
     cv.imshow("Full Scene", pic)
     cv.setMouseCallback('Full Scene', draw_shape)
+
     if len(park) > 0:  # Draw polygons on the image
         overlay = pic.copy()
         for shape in park:
-            points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
+            points_array = shape.reshape((-1, 1, 2))  # Ensure correct shape for fillPoly
             cv.fillPoly(overlay, [points_array], yellow)
         alpha = 0.5  # Transparency level
         pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
@@ -83,7 +77,6 @@ while check:
 
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
-
 
 def polygon_area(polygon):
     """ คำนวณพื้นที่ของพอลิกอน """
@@ -96,21 +89,20 @@ def polygon_intersection_area(polygon1, polygon2):
     intersection = poly1.intersection(poly2)
     return intersection.area
 
-
 while True:
     try:
         ret, pic = vdo.read()
         if not ret:
             break
 
-        pic = cv.flip(pic, 1)  # พลิกภาพจากซ้ายไปขวา
+        pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)        
         pic_de = pic.copy()
         
         frame_counter += 1
         if frame_counter % (skip_frames + 1) != 0:
             continue
 
-        result = model.track(pic_de, conf=0.5, persist=1, classes=0)
+        result = model.track(pic_de, conf=0.5, persist=1)
         overlay = pic.copy()
         car_in_box = park_data.copy()
         
@@ -127,25 +119,28 @@ while True:
             pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
 
             for shape in park:
-                park_polygon = shape.reshape((-1, 2)).tolist()
+                rec_polygon = shape.reshape((-1, 2)).tolist()
                 
-                inter_area = polygon_intersection_area(park_polygon, pix_polygon)
-                pix_area = polygon_area(park_polygon)
+                inter_area = polygon_intersection_area(rec_polygon, pix_polygon)
+                pix_area = polygon_area(rec_polygon)
                 if pix_area > 0:
                     overlap_percentage = (inter_area / pix_area) * 100
 
                     # เปลี่ยนสีเป็นสีเหลืองหากเปอร์เซ็นต์การทับซ้อน >= 30%
                     if overlap_percentage >= 30 and len(car_in_box) > 0:
-                        cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red) 
-                        car_in_box.remove(park_polygon)
-                        cv.putText(pic, f"{id}", (park_polygon[0][0],park_polygon[0][1]),
+                        cv.fillPoly(overlay, [np.array(rec_polygon, np.int32).reshape((-1, 1, 2))], red) 
+                        car_in_box.remove(rec_polygon)
+                        cv.putText(pic, f"{id}", (rec_polygon[0][0],rec_polygon[0][1]),
 cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
                     else:
-                        cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)  
+                        cv.fillPoly(overlay, [np.array(rec_polygon, np.int32).reshape((-1, 1, 2))], green)  
 
-                    cv.putText(pic, f"{int(overlap_percentage)}%", (int(pix[0]),int(pix[1]+20)),
+                    # แสดงเปอร์เซ็นต์การทับซ้อนที่กลางหน้าจอ
+                    cv.putText(pic, "Overlap: %.2f%%" % overlap_percentage, (int(pix[0]),int(pix[1])),
                             cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
                     
+                # else:
+                #     cv.fillPoly(overlay, [np.array(rec_polygon, np.int32).reshape((-1, 1, 2))], red)  # สีแดง
         alpha = 0.5
         cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
         cv.imshow('Full Scene', pic)
@@ -153,6 +148,6 @@ cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
             break
     except Exception as e:
         print(f'Error: {e}')
-        
+
 vdo.release()
 cv.destroyAllWindows()
