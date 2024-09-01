@@ -8,6 +8,10 @@ from ultralytics import YOLO
 
 # โหลดโมเดล YOLO
 model = YOLO('model/yolov8n.pt')
+modelP = YOLO('model/licen_100b.pt')
+modelC = YOLO('model/thaiChar_100b.pt')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 # เปิดกล้อง
 vdo = cv.VideoCapture(0)  
