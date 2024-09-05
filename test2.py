@@ -28,21 +28,23 @@ blue = (255, 0, 0)   # ไม่ทราบ
 yellow = (0, 255, 255)  # ความจุไม่แน่นอน
 
 points = []  # เก็บพ้อยที่ใช้ในการวาดพอลิกอน
-park = []    # เก็บพอลิกอนที่ระบุพื้นที่จอดรถ
+park_poly_pos = []    # เก็บพอลิกอนที่ระบุพื้นที่จอดรถ
 check = True
 park_data=  []
+overlap_park =[]
+
 
 def load_park_from_json(filename):
-    global park,park_data
+    global park_poly_pos,park_data
     if os.path.exists(filename):
         with open(filename, 'r') as f:
             park_data = json.load(f)
-            park = [np.array(shape, np.int32) for shape in park_data]
+            park_poly_pos = [np.array(shape, np.int32) for shape in park_data]
 
 
 def save_park_to_json(filename):
     global park_data 
-    for shape in park:
+    for shape in park_poly_pos:
         points = []
         for p in shape:
             points.append([int(p[0]), int(p[1])])
@@ -53,13 +55,13 @@ def save_park_to_json(filename):
 
 
 def draw_shape(event, x, y, flags, param):
-    global points, park
+    global points, park_poly_pos
     if event == cv.EVENT_LBUTTONDOWN:
         points.append((x, y))
-        print(points)
+        # print(points)
         if len(points) == 4:
             points.append(points[0])  # Close the polygon
-            park.append(np.array(points, np.int32))  # Convert to NumPy array
+            park_poly_pos.append(np.array(points, np.int32))  # Convert to NumPy array
             points.clear()
             save_park_to_json('line_test.json')  # Save polygons after adding a new one
 
@@ -72,9 +74,9 @@ pic = cv.flip(pic, 1)  # พลิกภาพจากซ้ายไปขว�
 while check:
     cv.imshow("Full Scene", pic)
     cv.setMouseCallback('Full Scene', draw_shape)
-    if len(park) > 0:  # Draw polygons on the image
+    if len(park_poly_pos) > 0:  # Draw polygons on the image
         overlay = pic.copy()
-        for shape in park:
+        for shape in park_poly_pos:
             points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
             cv.fillPoly(overlay, [points_array], yellow)
         alpha = 0.5  # Transparency level
@@ -112,8 +114,8 @@ while True:
 
         result = model.track(pic_de, conf=0.5, persist=1, classes=0)
         overlay = pic.copy()
-        car_in_box = park_data.copy()
-        
+        copy_park_data = park_data.copy()
+        id_inPark = []
         for x in result[0].boxes:
             name = result[0].names[int(x.cls)]
             pix = x.xyxy.tolist()[0]
@@ -126,25 +128,29 @@ while True:
             # แปลงขอบเขตของวัตถุเป็นพอลิกอนสำหรับคำนวณทับซ้อน
             pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
 
-            for shape in park:
+            for shape in park_poly_pos:
                 park_polygon = shape.reshape((-1, 2)).tolist()
-                
+
                 inter_area = polygon_intersection_area(park_polygon, pix_polygon)
                 pix_area = polygon_area(park_polygon)
                 if pix_area > 0:
                     overlap_percentage = (inter_area / pix_area) * 100
 
+                    print(f'{id} {overlap_percentage}')
+
+
                     # เปลี่ยนสีเป็นสีเหลืองหากเปอร์เซ็นต์การทับซ้อน >= 30%
-                    if overlap_percentage >= 30 and len(car_in_box) > 0:
+                    if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id  in id_inPark):
                         cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red) 
-                        car_in_box.remove(park_polygon)
-                        cv.putText(pic, f"{id}", (park_polygon[0][0],park_polygon[0][1]),
-cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
+                        copy_park_data.remove(park_polygon)
+                        cv.putText(pic, f"{id}", (park_polygon[0][0],park_polygon[0][1]),cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
+                        if id not in id_inPark:
+                            id_inPark.append(id)
+                        
                     else:
                         cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)  
 
-                    cv.putText(pic, f"{int(overlap_percentage)}%", (int(pix[0]),int(pix[1]+20)),
-                            cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
+                    cv.putText(pic, f"{int(overlap_percentage)}%", (int(pix[0]),int(pix[1]+20)),cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
                     
         alpha = 0.5
         cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)

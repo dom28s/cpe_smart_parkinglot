@@ -16,8 +16,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -38,7 +38,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=800
+x_threshold=600
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
