@@ -7,6 +7,7 @@ import numpy as np
 import time
 from datetime import datetime
 import mysql.connector
+import os
 
 
 
@@ -16,8 +17,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -38,7 +39,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=600
+x_threshold=800
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
@@ -116,6 +117,17 @@ def letterCheck(id,timeNow):
     cross_car.append([finalword,timeNow]) 
     car_hascross.append(id)
 
+    print('----=------=------=----')
+    print(cross_car)
+    for x in range(len(cross_car)):
+        print(cross_car[x][0])
+        if not os.path.exists('plateSave'):
+            with open('plateSave', 'w',encoding='utf-8') as file:
+                file.write(str(cross_car[x][0]))
+        else:
+            with open('plateSave', 'w',encoding='utf-8') as file:
+                file.write(str(cross_car[x][0]))
+    print('----=------=------=----')
 
 
 def is_line_intersecting_bbox(car, line):

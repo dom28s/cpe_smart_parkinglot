@@ -1,10 +1,8 @@
-import time
+import os
 
-i =0
-
-while True:
-    time.sleep(1)
-    i+=1
-    print(i)
-    if i%10 ==0:
-        i=0
+if not os.path.exists('plateSave'):
+    with open('plateSave', 'w') as file:
+        file.write("dsdsd")
+else:
+    with open('plateSave', 'a') as file:
+        file.write("cross_car")
