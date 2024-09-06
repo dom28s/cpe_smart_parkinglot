@@ -97,14 +97,12 @@ def letterCheck(id,timeNow):
 
     print('----=------=------=----')
     print(cross_car)
-    for x in range(len(cross_car)):
-        print(cross_car[x][0])
-        if not os.path.exists('plateSave'):
-            with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(str(cross_car[x][0]))
-        else:
-            with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(str(cross_car[x][0]))
+    if not os.path.exists('plateSave'):
+        with open('plateSave', 'w',encoding='utf-8') as file:
+            file.write(f'{finalword} {timeNow}\n')
+    else:
+        with open('plateSave', 'a',encoding='utf-8') as file:
+            file.write(f'{finalword} {timeNow}\n')
     print('----=------=------=----')
 
 
