@@ -31,7 +31,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=750
+x_threshold=730
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
