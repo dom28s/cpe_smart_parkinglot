@@ -5,16 +5,17 @@ import numpy as np
 import time
 from datetime import datetime
 import os
+from PIL import Image
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
-model = YOLO('model/yolov8n.pt')
+model = YOLO('model/yolov8s.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.105:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -22,7 +23,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 7
+skip_frames = 9
 frame_counter = 0
 
 wordfull = ""
@@ -35,7 +36,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=700
+x_threshold=750
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
@@ -72,7 +73,7 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 
-def letterCheck(id,timeNow):
+def letterCheck(id,timeNow,pic_black):
     global dataword,plateName,car_id,id_cross,datacar_in_park
     word = {}
     max = 0
@@ -119,11 +120,25 @@ def letterCheck(id,timeNow):
         print(cross_car[x][0])
         if not os.path.exists('plateSave'):
             with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(str(cross_car[x][0]))
+                file.write(f'{finalword} {timeNow}\n')
         else:
             with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(str(cross_car[x][0]))
+                file.write(f'{finalword} {timeNow}\n')
     print('----=------=------=----')
+
+    current_time = datetime.now()
+    day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
+    hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
+    sec=current_time.strftime('%S')
+
+    save_dir = f'plateCross/{day}/{hour}/'
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    save_dir = f'plateCross/{day}/{hour}/'
+    filename = f'{finalword}_{hour}_{sec}.jpg'
+    cv.imwrite(f'{save_dir}{filename}',pic_black)
+    
 
 
 def is_line_intersecting_bbox(car, line):
@@ -148,6 +163,12 @@ def do_intersect(line1, line2):
 
     (A, B), (C, D) = line1, line2
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
+
+def apply_otsu_threshold(image):
+    gray_image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
+    _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    return binary_image
 
 
 ret, pic = vdo.read()
@@ -179,8 +200,7 @@ while True:
             continue
 
         pic_black = pic.copy()
-        
-        
+
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
         cv.putText(pic, "Press P To Exit", (5,30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -199,6 +219,8 @@ while True:
             name = result_model[0].names[int(e.cls)]
             pix = e.xyxy.tolist()[0]
             id = int(e.id)
+            
+
 
             car = (int(pix[0]), int(pix[1]), int(pix[2]), int(pix[3]))
 
@@ -217,6 +239,9 @@ while True:
 
                 crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
                 crop_plate = cv.resize(crop_plate, (320, 250))
+
+                binary_image = apply_otsu_threshold(crop_plate)
+                crop_plate = cv.merge([binary_image] * 3)
 
                 # gray_image = cv.cvtColor(crop_plate, cv.COLOR_BGR2GRAY)
                 # blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
@@ -273,12 +298,14 @@ while True:
                     for x in carhit:
                         if x == id:
                             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                            letterCheck(id,timeNow)
+                            letterCheck(id,timeNow,pic_black)
                             
+                                                
                     
                     
 
         cv.imshow('Full Scene', pic)
+
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
 

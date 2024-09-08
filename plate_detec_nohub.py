@@ -5,24 +5,23 @@ import numpy as np
 import time
 from datetime import datetime
 import os
-
+from PIL import Image
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
-model = YOLO('model/yolov8n.pt')
+model = YOLO('model/yolov8s.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
-
 check = True
 check2 = True
 count = 0
-skip_frames = 7
+skip_frames = 15
 frame_counter = 0
 
 wordfull = ""
@@ -35,7 +34,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=800
+x_threshold=700
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
@@ -54,7 +53,8 @@ except FileNotFoundError:
     allline = []
 
 
-def letterCheck(id,timeNow):
+
+def letterCheck(id,timeNow,pic_black):
     global dataword,plateName,car_id,id_cross,datacar_in_park
     word = {}
     max = 0
@@ -97,13 +97,28 @@ def letterCheck(id,timeNow):
 
     print('----=------=------=----')
     print(cross_car)
-    if not os.path.exists('plateSave'):
-        with open('plateSave', 'w',encoding='utf-8') as file:
-            file.write(f'{finalword} {timeNow}\n')
-    else:
-        with open('plateSave', 'a',encoding='utf-8') as file:
-            file.write(f'{finalword} {timeNow}\n')
+    for x in range(len(cross_car)):
+        print(cross_car[x][0])
+        if not os.path.exists('plateSave'):
+            with open('plateSave', 'w',encoding='utf-8') as file:
+                file.write(str(cross_car[x][0]))
+        else:
+            with open('plateSave', 'w',encoding='utf-8') as file:
+                file.write(str(cross_car[x][0]))
     print('----=------=------=----')
+
+    current_time = datetime.now()
+    day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
+    hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
+    sec=current_time.strftime('%S')
+
+    save_dir = f'plateCross/{day}/{hour}/'
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    filename = f'{finalword}_{hour}_{sec}.jpg'
+    cv.imwrite(f'{save_dir}{filename}',pic_black)
 
 
 def is_line_intersecting_bbox(car, line):
@@ -129,10 +144,22 @@ def do_intersect(line1, line2):
     (A, B), (C, D) = line1, line2
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
 
+def apply_otsu_threshold(image):
+    gray_image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
+    _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    return binary_image
+
+
+ret, pic = vdo.read()
+pic2 = pic.copy()
 
 while True:
     try:
         ret, pic = vdo.read()
+        width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
+        height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+
         if not ret:
             print("Failed to read frame. Exiting...")
             break
@@ -143,25 +170,20 @@ while True:
             continue
 
         pic_black = pic.copy()
-        
-        
+
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
-        
+
         line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
         line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
 
-      
         result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
             pix = e.xyxy.tolist()[0]
             id = int(e.id)
-
+            
             car = (int(pix[0]), int(pix[1]), int(pix[2]), int(pix[3]))
-
-                        # CAR DETECTION
-           
             crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
             resultP = modelP(crop_car, conf=0.5)
 
@@ -169,11 +191,14 @@ while True:
             for x in resultP[0].boxes:
                 pname = resultP[0].names[int(x.cls)]
                 ppix = x.xyxy.tolist()[0]
-                
+                cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
+
                 crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
                 crop_plate = cv.resize(crop_plate, (320, 250))
 
-               
+                binary_image = apply_otsu_threshold(crop_plate)
+                crop_plate = cv.merge([binary_image] * 3)
+
                 resultC = modelC(crop_plate, conf=0.5)
 
                 all_word = []
@@ -189,8 +214,8 @@ while True:
 
                     except KeyError:
                         print("Key not found in data dictionary")
-
-                   
+                    
+                    print(letter_dic[cname])
                             
                 if len(all_word) != 0:
                     for x in range(len(all_word)):
@@ -206,17 +231,15 @@ while True:
                 if is_line_intersecting_bbox(car, line1):
                     if not id in carhit:
                         carhit.append(id)
-                        
+
                 if is_line_intersecting_bbox(car, line2):
                     for x in carhit:
                         if x == id:
                             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                            letterCheck(id,timeNow)
+                            letterCheck(id,timeNow,pic_black)
                             
-                    
-                    
-
-
+        if cv.waitKey(1) & 0xFF == ord('p'):
+            break
 
     except Exception as e:
         print(f'Error: {e}')
@@ -226,8 +249,7 @@ print(cross_car)
 print(f'id that has cross : {car_hascross}')
 print('_______ ')
 
-with open ('data.txt','w',encoding='utf-8')as file:
-    file.write(str(dataword))
-
+vdo.release()
+cv.destroyAllWindows()
 
 
