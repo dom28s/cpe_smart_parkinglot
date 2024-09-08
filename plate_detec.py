@@ -11,11 +11,11 @@ from PIL import Image
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
-model = YOLO('model/yolov8s.pt')
+model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -36,7 +36,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=750
+x_threshold=730
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
@@ -111,33 +111,33 @@ def letterCheck(id,timeNow,pic_black):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
-    cross_car.append([finalword,timeNow]) 
-    car_hascross.append(id)
-
-    print('----=------=------=----')
-    print(cross_car)
-    for x in range(len(cross_car)):
-        print(cross_car[x][0])
+    if id not in car_hascross:
+        car_hascross.append(id)
+        cross_car.append([finalword,timeNow]) 
+        print('----=------=------=----')
+        print(cross_car)
         if not os.path.exists('plateSave'):
             with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(f'{finalword} {timeNow}\n')
+                for x in range(len(cross_car)):
+                    file.write(f'{cross_car[x][0]} {timeNow}\n')
         else:
             with open('plateSave', 'w',encoding='utf-8') as file:
-                file.write(f'{finalword} {timeNow}\n')
-    print('----=------=------=----')
+                for x in range(len(cross_car)):
+                    file.write(f'{cross_car[x][0]} {timeNow}\n')
+        print('----=------=------=----')
 
-    current_time = datetime.now()
-    day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
-    hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
-    sec=current_time.strftime('%S')
+        current_time = datetime.now()
+        day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
+        hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
+        sec=current_time.strftime('%S')
 
-    save_dir = f'plateCross/{day}/{hour}/'
+        save_dir = f'plateCross/{day}/{hour}/'
 
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    save_dir = f'plateCross/{day}/{hour}/'
-    filename = f'{finalword}_{hour}_{sec}.jpg'
-    cv.imwrite(f'{save_dir}{filename}',pic_black)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_dir = f'plateCross/{day}/{hour}/'
+        filename = f'{finalword}_{hour}_{sec}.jpg'
+        cv.imwrite(f'{save_dir}{filename}',pic_black)
     
 
 
@@ -238,17 +238,10 @@ while True:
                 cv.rectangle(crop_car, (int(ppix[0]), int(ppix[1])), (int(ppix[2]), int(ppix[3])), (255, 0, 0), 2)
 
                 crop_plate = crop_car[int(ppix[1]):int(ppix[3]), int(ppix[0]):int(ppix[2])]
-                crop_plate = cv.resize(crop_plate, (320, 250))
+                crop_plate = cv.resize(crop_plate, (320, 320))
 
                 binary_image = apply_otsu_threshold(crop_plate)
                 crop_plate = cv.merge([binary_image] * 3)
-
-                # gray_image = cv.cvtColor(crop_plate, cv.COLOR_BGR2GRAY)
-                # blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
-                # _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-                # binary_image_3channel = cv.merge([binary_image, binary_image, binary_image])
-
-                # resultC = modelC(binary_image_3channel, conf=0.5)
 
                 resultC = modelC(crop_plate, conf=0.5)
 
@@ -266,15 +259,11 @@ while True:
                     except KeyError:
                         print("Key not found in data dictionary")
 
-                    # cv.putText(binary_image_3channel, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    # cv.rectangle(binary_image_3channel, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
-                    
                     cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
 
                     print(letter_dic[cname])
 
-                    # cv.imshow('df', binary_image_3channel)
                     cv.imshow('df', crop_plate)
                             
                 if len(all_word) != 0:
@@ -300,10 +289,6 @@ while True:
                             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                             letterCheck(id,timeNow,pic_black)
                             
-                                                
-                    
-                    
-
         cv.imshow('Full Scene', pic)
 
         if cv.waitKey(1) & 0xFF == ord('p'):
@@ -317,8 +302,7 @@ print(cross_car)
 print(f'id that has cross : {car_hascross}')
 print('_______ ')
 
-with open ('data.txt','w',encoding='utf-8')as file:
-    file.write(str(dataword))
+
 vdo.release()
 cv.destroyAllWindows()
 

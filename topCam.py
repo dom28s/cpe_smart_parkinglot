@@ -26,6 +26,7 @@ max_points = 4
 check = True
 x_threshold = 400
 
+
 def load_park_from_json(filename):
     global park
     if os.path.exists(filename):
