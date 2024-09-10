@@ -292,6 +292,8 @@ while True:
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
 
+
+
     except Exception as e:
         print(f'Error: {e}')
 

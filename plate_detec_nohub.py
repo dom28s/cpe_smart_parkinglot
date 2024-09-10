@@ -12,8 +12,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 check = True
 check2 = True
@@ -212,6 +212,8 @@ while True:
 
                     except KeyError:
                         print("Key not found in data dictionary")
+
+                    print(letter_dic[cname])
                             
                 if len(all_word) != 0:
                     for x in range(len(all_word)):
