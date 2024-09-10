@@ -170,6 +170,7 @@ def apply_otsu_threshold(image):
     _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     return binary_image
 
+carhit = []  # เก็บรถที่ชนเส้น line1
 
 ret, pic = vdo.read()
 pic2 = pic.copy()
@@ -250,7 +251,7 @@ while True:
                     cpix = y.xyxy.tolist()[0]
                     try:
                         if len(letter_dic[str(cname)]) > 2:
-                            all_word.append([letter_dic[str(cname)], id, 10000])
+                            print('')
                         else:
                             all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
