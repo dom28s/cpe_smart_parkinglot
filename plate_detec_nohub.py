@@ -15,6 +15,8 @@ modelC = YOLO('model/thaiChar_100b.pt')
 # vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
+
+
 check = True
 check2 = True
 count = 0
@@ -212,6 +214,8 @@ while True:
 
                     except KeyError:
                         print("Key not found in data dictionary")
+
+                    print(letter_dic[cname])
                             
                 if len(all_word) != 0:
                     for x in range(len(all_word)):
@@ -221,17 +225,21 @@ while True:
                                 all_word[y] = all_word[x]
                                 all_word[x] = temp
                     dataword.append(all_word.copy())
-                    
+
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id not in carhit:
                         carhit.append(id)
 
                 if is_line_intersecting_bbox(car, line2):
                     for x in carhit:
                         if x == id:
+                            timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                             letterCheck(id,timeNow,pic_black)
+                    
                             
         print(timeNow)
+        print(carhit)
+        print(cross_car)
 
     except Exception as e:
         print(f'Error: {e}')
