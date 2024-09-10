@@ -47,6 +47,9 @@ carhit = []
 carinpark = []
 car_hascross=[]
 
+retry_delay = 5  # หน่วงเวลาระหว่างการพยายามใหม่ (วินาที)
+
+
 
 try:
     with open('line.json', 'r') as f:
@@ -191,8 +194,13 @@ while True:
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
 
         if not ret:
-            print("Failed to read frame. Exiting...")
-            break
+            print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
+            vdo.release()
+            time.sleep(5)  
+            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            continue  
+
+        retry_count = 0
         
         # skip frame
         frame_counter += 1
