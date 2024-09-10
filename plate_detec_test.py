@@ -14,8 +14,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -23,7 +23,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 15
+skip_frames = 7
 frame_counter = 0
 
 wordfull = ""
@@ -46,6 +46,9 @@ yellow = (0, 255, 255)  # undefined occupancy
 carhit = []
 carinpark = []
 car_hascross=[]
+
+retry_delay = 5  # หน่วงเวลาระหว่างการพยายามใหม่ (วินาที)
+
 
 
 try:
@@ -170,7 +173,6 @@ def apply_otsu_threshold(image):
     _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     return binary_image
 
-carhit = []  # เก็บรถที่ชนเส้น line1
 
 ret, pic = vdo.read()
 pic2 = pic.copy()
@@ -192,8 +194,11 @@ while True:
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
 
         if not ret:
-            print("Failed to read frame. Exiting...")
-            break
+            print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
+            vdo.release()
+            time.sleep(5)  
+            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            continue  
         
         # skip frame
         frame_counter += 1
@@ -251,7 +256,7 @@ while True:
                     cpix = y.xyxy.tolist()[0]
                     try:
                         if len(letter_dic[str(cname)]) > 2:
-                            print('')
+                            all_word.append([letter_dic[str(cname)], id, 10000])
                         else:
                             all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
@@ -274,29 +279,19 @@ while True:
                                 all_word[x] = temp
                     print(all_word)
                     dataword.append(all_word.copy())
+                    
 
                 if is_line_intersecting_bbox(car, line1):
-                    if id not in carhit:
+                    if not id in carhit:
                         carhit.append(id)
-                        print(f"Car {id} hit line1 and added to carhit")  
-                        cv.putText(pic, f"hit 1 : {id}", (500, 500), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                    else:
-                        print(f"Car {id} hit line1 already add")  
-                        cv.putText(pic, f"hit 1 : {id}", (500, 500), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                 if is_line_intersecting_bbox(car, line2):
-                    print(f"Car {id} hit line2")  # Debugging statement
-                    cv.putText(pic, f"hit 2 : {id}", (1150, 1100), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
+                    cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                     for x in carhit:
-                        cv.putText(pic, f"{id} hit all", (1150, 1150), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         if x == id:
-                            cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                            print(f"Car {id} has crossed both lines at {timeNow}")  # Debugging statement
                             letterCheck(id,timeNow,pic_black)
-                    
-                      
                             
         cv.imshow('Full Scene', pic)
 
@@ -305,8 +300,7 @@ while True:
 
     except Exception as e:
         print(f'Error: {e}')
-print('_______ ')
-print(carhit)
+
 print('_______ ')
 print(cross_car)
 print(f'id that has cross : {car_hascross}')

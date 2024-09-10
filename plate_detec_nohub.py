@@ -160,8 +160,11 @@ while True:
         timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
 
         if not ret:
-            print("Failed to read frame. Exiting...")
-            break
+            print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
+            vdo.release()
+            time.sleep(5)  
+            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            continue  
         
         # skip frame
         frame_counter += 1

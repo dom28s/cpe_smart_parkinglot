@@ -1,61 +1,83 @@
-from ultralytics import YOLO
 import cv2 as cv
 import numpy as np
 import json
 import os
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
+from ultralytics import YOLO
 
-model = YOLO('model/yolov8l.pt')
+# โหลดโมเดล YOLO
+model = YOLO('model/yolov8n.pt')
 
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# เปิดกล้อง
 vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')  
 
-frame_counter = 0
-skip_frames = 15
 
+frame_counter = 0
+skip_frames = 7
+check = True
+
+# ตั้งค่าหน้าต่างสำหรับการแสดงผล
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
-green = (0, 255, 0)  # empty
-red = (0, 0, 255)    # not empty
-blue = (255, 0, 0)   # unknown
-yellow = (0, 255, 255)  # undefined occupancy
+# กำหนดสีสำหรับแสดงผล
+green = (0, 255, 0)  # ว่าง
+red = (0, 0, 255)    # ไม่ว่าง
+yellow = (0, 255, 255)  # ความจุไม่แน่นอน
 
-points = []
-park = []
-max_points = 4
-check = True
-x_threshold = 400
-
+points = []  # เก็บพ้อยที่ใช้ในการวาดพอลิกอน
+park_poly_pos = []    # เก็บพอลิกอนที่ระบุพื้นที่จอดรถ
+park_data = []
+park_id = 0  # ID สำหรับพอลิกอนใหม่
 
 def load_park_from_json(filename):
-    global park
+    global park_poly_pos, park_data, park_id
     if os.path.exists(filename):
         with open(filename, 'r') as f:
             park_data = json.load(f)
-            park = [np.array(shape, np.int32) for shape in park_data]
+            park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
+            if park_data:
+                park_id = max([shape['id'] for shape in park_data]) + 1  # ตั้งค่า park_id เป็นค่าถัดไป
 
 
 def save_park_to_json(filename):
-    park_data = []
-    for shape in park:
-        park_data.append([[int(p[0]), int(p[1])] for p in shape])
+    global park_data 
     with open(filename, 'w') as f:
         json.dump(park_data, f)
 
 
 def draw_shape(event, x, y, flags, param):
-    global points, park
+    global points, park_poly_pos, park_id, park_data
     if event == cv.EVENT_LBUTTONDOWN:
         points.append((x, y))
-        print(points)
-        if len(points) == max_points:
+        if len(points) == 4:
             points.append(points[0])  # Close the polygon
-            park.append(np.array(points, np.int32))  # Convert to NumPy array
+            park_poly_pos.append(np.array(points, np.int32))  # Convert to NumPy array
+            # เพิ่มข้อมูลพอลิกอนพร้อมกับ ID
+            park_data.append({
+                'id': park_id,
+                'polygon': [list(p) for p in points]
+            })
+            park_id += 1  # เพิ่ม ID สำหรับพอลิกอนถัดไป
             points.clear()
             save_park_to_json('park.json')  # Save polygons after adding a new one
 
 
+def polygon_area(polygon):
+    """ คำนวณพื้นที่ของพอลิกอน """
+    return Polygon(polygon).area
+
+def polygon_intersection_area(polygon1, polygon2):
+    """ คำนวณพื้นที่ทับซ้อนของพอลิกอนสองอัน """
+    poly1 = Polygon(polygon1)
+    poly2 = Polygon(polygon2)
+    intersection = poly1.intersection(poly2)
+    return intersection.area
+
+
 load_park_from_json('park.json')
+
 
 ret, pic = vdo.read()
 pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
@@ -63,11 +85,10 @@ pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 while check:
     cv.imshow("Full Scene", pic)
     cv.setMouseCallback('Full Scene', draw_shape)
-
-    if len(park) > 0:  # Draw polygons on the image
+    if len(park_poly_pos) > 0:  # Draw polygons on the image
         overlay = pic.copy()
-        for shape in park:
-            points_array = shape.reshape((-1, 1, 2))  # Ensure correct shape for fillPoly
+        for shape in park_poly_pos:
+            points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
             cv.fillPoly(overlay, [points_array], yellow)
         alpha = 0.5  # Transparency level
         pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
@@ -77,65 +98,78 @@ while check:
         break
 
 while True:
-    ret, pic = vdo.read()
-    if not ret:
-        break
+    try:
+        ret, pic = vdo.read()
+        if not ret:
+            break
 
-    pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+        pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+        pic_de = pic.copy()
+        
+        frame_counter += 1
+        if frame_counter % (skip_frames + 1) != 0:
+            continue
 
-    pic_de = pic.copy()
-    cv.rectangle(pic_de, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
+        result = model.track(pic_de, conf=0.5, persist=1, classes=2)
+        overlay = pic.copy()
+        copy_park_data = park_data.copy()
+        id_inPark = []
 
-    frame_counter += 1
-    if frame_counter % (skip_frames + 1) != 0:
-        continue
+        for x in result[0].boxes:
+            name = result[0].names[int(x.cls)]
+            pix = x.xyxy.tolist()[0]
+            id = int(x.id)
 
-    result = model.track(pic_de, conf=0.5, persist=1)
+            # แสดงชื่อและ ID ของวัตถุที่ตรวจพบ
+            cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+            cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
 
-    overlay = pic.copy()
+            # แปลงขอบเขตของวัตถุเป็นพอลิกอนสำหรับคำนวณทับซ้อน
+            pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
 
-    for shape in park:
-        points_array = shape.reshape((-1, 1, 2))
+            for shape_data in park_data:
+                park_polygon = shape_data['polygon']
+                park_id = shape_data['id']
 
-        # Calculate the area of the parking space
-        parking_area = cv.contourArea(points_array)
+                inter_area = polygon_intersection_area(park_polygon, pix_polygon)
+                pix_area = polygon_area(park_polygon)
+                if pix_area > 0:
+                    overlap_percentage = (inter_area / pix_area) * 100
+                    print(f'{id} {overlap_percentage}')
 
-        is_occupied = False
+                    if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
+                        # Find the index of the polygon with the same id in copy_park_data
+                        matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
+                        if matching_polygon_index is not None:
+                            cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red) 
+                            copy_park_data.pop(matching_polygon_index)  # Remove by index
+                            id_inPark.append(id)  # Add to id_inPark to avoid reprocessing
+                    else:
+                        cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)
 
-        for box in result[0].boxes:
-            x_min, y_min, x_max, y_max = map(int, box.xyxy.tolist()[0])
-            bbox_points = np.array([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)], np.int32)
 
-            # Find the intersection area between the parking space and the bounding box
-            intersection_area = cv.intersectConvexConvex(points_array, bbox_points)[0]
+                    # หาจุดบนสุดของพอลิกอนเพื่อแสดงเปอร์เซ็นต์การทับซ้อน
+                    top_left = min(park_polygon, key=lambda p: p[1])  # หาจุดที่มี y น้อยที่สุด
+                    cv.putText(pic, f"{int(overlap_percentage)}%", (top_left[0], top_left[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
 
-            # Calculate the percentage of overlap
-            overlap_percentage = intersection_area / parking_area
+        # วาด ID ตรงกลางพอลิกอน
+        for shape_data in park_data:
+            park_polygon = shape_data['polygon']
+            park_id = shape_data['id']
 
-            # Check if the overlap is greater than 50%
-            if overlap_percentage > 0.2:
-                is_occupied = True
-                break
+            # คำนวณจุดศูนย์กลางพอลิกอนเพื่อแสดง ID
+            poly = Polygon(park_polygon)
+            centroid = poly.centroid.coords[0]
+            cv.putText(pic, f"ID {park_id}", (int(centroid[0]), int(centroid[1])), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
 
-        # Set the color based on occupancy
-        poly_color = red if is_occupied else green
-        cv.fillPoly(overlay, [points_array], poly_color)
-
-    alpha = 0.5
-    cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
-
-    for x in result[0].boxes:
-        name = result[0].names[int(x.cls)]
-        pix = x.xyxy.tolist()[0]
-        id = int(x.id)
-
-        cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-        cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
-
-    cv.imshow('Full Scene', pic)
-
-    if cv.waitKey(1) & 0xFF == ord('p'):
-        break
-
+        alpha = 0.5
+        cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
+        cv.imshow('Full Scene', pic)
+        if cv.waitKey(1) & 0xFF == ord('p'):
+            break
+    except Exception as e:
+        print(f'Error: {e}')
+        
 vdo.release()
 cv.destroyAllWindows()
+
