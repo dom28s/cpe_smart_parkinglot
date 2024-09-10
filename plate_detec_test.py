@@ -14,8 +14,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -274,19 +274,28 @@ while True:
                                 all_word[x] = temp
                     print(all_word)
                     dataword.append(all_word.copy())
-                    
 
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id not in carhit:
                         carhit.append(id)
-                        cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        print(f"Car {id} hit line1 and added to carhit")  
+                        cv.putText(pic, f"hit 1 : {id}", (500, 500), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    else:
+                        print(f"Car {id} hit line1 already add")  
+                        cv.putText(pic, f"hit 1 : {id}", (500, 500), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                 if is_line_intersecting_bbox(car, line2):
-                    cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    print(f"Car {id} hit line2")  # Debugging statement
+                    cv.putText(pic, f"hit 2 : {id}", (1150, 1100), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
                     for x in carhit:
+                        cv.putText(pic, f"{id} hit all", (1150, 1150), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         if x == id:
                             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+                            print(f"Car {id} has crossed both lines at {timeNow}")  # Debugging statement
                             letterCheck(id,timeNow,pic_black)
+                    
+                      
                             
         cv.imshow('Full Scene', pic)
 
@@ -295,7 +304,8 @@ while True:
 
     except Exception as e:
         print(f'Error: {e}')
-
+print('_______ ')
+print(carhit)
 print('_______ ')
 print(cross_car)
 print(f'id that has cross : {car_hascross}')

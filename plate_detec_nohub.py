@@ -221,17 +221,21 @@ while True:
                                 all_word[y] = all_word[x]
                                 all_word[x] = temp
                     dataword.append(all_word.copy())
-                    
+
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id not in carhit:
                         carhit.append(id)
 
                 if is_line_intersecting_bbox(car, line2):
                     for x in carhit:
                         if x == id:
+                            timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                             letterCheck(id,timeNow,pic_black)
+                    
                             
         print(timeNow)
+        print(carhit)
+        print(cross_car)
 
     except Exception as e:
         print(f'Error: {e}')
