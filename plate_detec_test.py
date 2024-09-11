@@ -15,7 +15,7 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+# vdo = cv.VideoCapture('vdo_from_park/G9.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
@@ -24,7 +24,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 20
+skip_frames = 7
 frame_counter = 0
 
 wordfull = ""
@@ -48,8 +48,6 @@ carhit = []
 carinpark = []
 car_hascross=[]
 intertest =[]
-
-
 
 
 try:
@@ -229,6 +227,8 @@ while True:
         ret, pic = vdo.read()
         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
@@ -256,7 +256,7 @@ while True:
         cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
         cv.line(pic,(x_threshold,0),(x_threshold,int(height)),red,2)
         
-        result_model = model.track(pic_black, conf=0.3, classes=2, persist=True)
+        result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
@@ -274,13 +274,12 @@ while True:
                 cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 for x in carhit:
                     if x == id:
-                        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                         letterCheck(id,timeNow,pic_black)
 
                         # CAR DETECTION
             cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
-
+            print
             crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
             resultP = modelP(crop_car, conf=0.5)
 
@@ -342,7 +341,7 @@ while True:
                 #             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                 #             letterCheck(id,timeNow,pic_black)
 
-                            
+        print(timeNow)
         cv.imshow('Full Scene', pic)
 
         if cv.waitKey(1) & 0xFF == ord('p'):

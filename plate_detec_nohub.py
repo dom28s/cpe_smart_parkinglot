@@ -18,11 +18,10 @@ modelC = YOLO('model/thaiChar_100b.pt')
 # vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
-
 check = True
 check2 = True
 count = 0
-skip_frames = 6
+skip_frames = 7
 frame_counter = 0
 
 wordfull = ""
@@ -53,8 +52,6 @@ try:
         allline = json.load(f)
 except FileNotFoundError:
     allline = []
-
-
 
 
 def letterCheck(id,timeNow,pic_black):
@@ -125,7 +122,6 @@ def letterCheck(id,timeNow,pic_black):
         cv.imwrite(f'{save_dir}{filename}',pic_save)
     
 
-
 def is_line_intersecting_bbox(car, line):
     x1, y1, x2, y2 = car
     (x3, y3), (x4, y4) = line
@@ -145,17 +141,15 @@ def is_line_intersecting_bbox(car, line):
 def do_intersect(line1, line2):
     def ccw(A, B, C):
         return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
-
     (A, B), (C, D) = line1, line2
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
+
 
 def apply_otsu_threshold(image):
     gray_image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     blurred_image = cv.GaussianBlur(gray_image, (5, 5), 0)
     _, binary_image = cv.threshold(blurred_image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     return binary_image
-
-
 
 
 def bbox_to_polygon(pix):
@@ -166,11 +160,9 @@ def bbox_to_polygon(pix):
         (pix[0], pix[3])   # มุมล่างซ้าย
     ])
 
-# สร้าง polygon ของพื้นที่ทางซ้ายของเส้น line2
+
 def create_left_polygon(line2_points, img_width, img_height):
     p1, p2 = line2_points
-    
-    # สร้าง polygon ด้านซ้ายของเส้น line2
     return Polygon([
         (0, 0),             # มุมบนซ้ายของภาพ
         (p1[0], p1[1]),     # จุดแรกของ line2
@@ -178,18 +170,15 @@ def create_left_polygon(line2_points, img_width, img_height):
         (0, img_height)     # มุมล่างซ้ายของภาพ
     ])
 
-# ตรวจสอบว่า intersect กันเกิน 10% หรือไม่
-def is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+
+def is_intersecting(car_polygon, left_polygon):
     if car_polygon.intersects(left_polygon):
-        # คำนวณพื้นที่ intersect
         intersection_area = car_polygon.intersection(left_polygon).area
         car_area = car_polygon.area
         
-        # ตรวจสอบว่า intersect มากกว่า 10% หรือไม่
         if (intersection_area / car_area) > 0.001:
             return True
     return False
-
 
 
 while True:
@@ -197,6 +186,8 @@ while True:
         ret, pic = vdo.read()
         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
@@ -212,13 +203,12 @@ while True:
 
         pic_black = pic.copy()
 
-
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
 
         line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
         line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
         
-        result_model = model.track(pic_black, conf=0.3, classes=2, persist=True)
+        result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
@@ -230,12 +220,10 @@ while True:
             car_polygon = bbox_to_polygon(pix)
             left_polygon = create_left_polygon(line2, width, height)
 
-
             # line 2 check dont know why
-            if is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+            if is_intersecting(car_polygon, left_polygon):
                 for x in carhit:
                     if x == id:
-                        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                         letterCheck(id,timeNow,pic_black)
 
                         # CAR DETECTION
@@ -269,10 +257,8 @@ while True:
                     except KeyError:
                         print("Key not found in data dictionary")
 
-
                     print(letter_dic[cname])
-
-                            
+  
                 if len(all_word) != 0:
                     for x in range(len(all_word)):
                         for y in range(len(all_word)):
@@ -283,18 +269,12 @@ while True:
                     print(all_word)
                     dataword.append(all_word.copy())
                     
-
                 if is_line_intersecting_bbox(car, line1):
                     if not id in carhit:
                         carhit.append(id)
-
-                print(timeNow)
-                            
-
+        print(timeNow)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
-
-
 
     except Exception as e:
         print(f'Error: {e}')
