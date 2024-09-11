@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import os
 from PIL import Image
+from shapely.geometry import Polygon
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -14,8 +15,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
+# vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -23,7 +24,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 7
+skip_frames = 6
 frame_counter = 0
 
 wordfull = ""
@@ -46,8 +47,8 @@ yellow = (0, 255, 255)  # undefined occupancy
 carhit = []
 carinpark = []
 car_hascross=[]
+intertest =[]
 
-retry_delay = 5  # หน่วงเวลาระหว่างการพยายามใหม่ (วินาที)
 
 
 
@@ -140,7 +141,8 @@ def letterCheck(id,timeNow,pic_black):
             os.makedirs(save_dir)
         save_dir = f'plateCross/{day}/{hour}/'
         filename = f'{finalword}_{hour}_{sec}.jpg'
-        cv.imwrite(f'{save_dir}{filename}',pic_black)
+        ret , pic_save = vdo.read()
+        cv.imwrite(f'{save_dir}{filename}',pic_save)
     
 
 
@@ -174,6 +176,41 @@ def apply_otsu_threshold(image):
     return binary_image
 
 
+
+
+def bbox_to_polygon(pix):
+    return Polygon([
+        (pix[0], pix[1]),  # มุมบนซ้าย
+        (pix[2], pix[1]),  # มุมบนขวา
+        (pix[2], pix[3]),  # มุมล่างขวา
+        (pix[0], pix[3])   # มุมล่างซ้าย
+    ])
+
+# สร้าง polygon ของพื้นที่ทางซ้ายของเส้น line2
+def create_left_polygon(line2_points, img_width, img_height):
+    p1, p2 = line2_points
+    
+    # สร้าง polygon ด้านซ้ายของเส้น line2
+    return Polygon([
+        (0, 0),             # มุมบนซ้ายของภาพ
+        (p1[0], p1[1]),     # จุดแรกของ line2
+        (p2[0], p2[1]),     # จุดที่สองของ line2
+        (0, img_height)     # มุมล่างซ้ายของภาพ
+    ])
+
+# ตรวจสอบว่า intersect กันเกิน 10% หรือไม่
+def is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+    if car_polygon.intersects(left_polygon):
+        # คำนวณพื้นที่ intersect
+        intersection_area = car_polygon.intersection(left_polygon).area
+        car_area = car_polygon.area
+        
+        # ตรวจสอบว่า intersect มากกว่า 10% หรือไม่
+        if (intersection_area / car_area) > 0.1:
+            return True
+    return False
+
+
 ret, pic = vdo.read()
 pic2 = pic.copy()
 
@@ -195,10 +232,7 @@ while True:
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
-            vdo.release()
-            time.sleep(5)  
-            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-            continue  
+            break
         
         # skip frame
         frame_counter += 1
@@ -207,19 +241,22 @@ while True:
 
         pic_black = pic.copy()
 
+
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
         cv.putText(pic, "Press P To Exit", (5,30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
+
         line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
         line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+
 
         cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)
         cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
         cv.line(pic,(x_threshold,0),(x_threshold,int(height)),red,2)
         
-        result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
+        result_model = model.track(pic_black, conf=0.3, classes=2, persist=True)
 
         for e in result_model[0].boxes:
             name = result_model[0].names[int(e.cls)]
@@ -227,6 +264,18 @@ while True:
             id = int(e.id)
             
             car = (int(pix[0]), int(pix[1]), int(pix[2]), int(pix[3]))
+
+            car_polygon = bbox_to_polygon(pix)
+            left_polygon = create_left_polygon(line2, width, height)
+
+
+            # line 2 check dont know why
+            if is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+                cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                for x in carhit:
+                    if x == id:
+                        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+                        letterCheck(id,timeNow,pic_black)
 
                         # CAR DETECTION
             cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -286,17 +335,20 @@ while True:
                         carhit.append(id)
                         cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-                if is_line_intersecting_bbox(car, line2):
-                    cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                    for x in carhit:
-                        if x == id:
-                            timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                            letterCheck(id,timeNow,pic_black)
+                # if is_line_intersecting_bbox(car, line2):
+                #     cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                #     for x in carhit:
+                #         if x == id:
+                #             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+                #             letterCheck(id,timeNow,pic_black)
+
                             
         cv.imshow('Full Scene', pic)
 
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
+
+
 
     except Exception as e:
         print(f'Error: {e}')
@@ -305,6 +357,7 @@ print('_______ ')
 print(cross_car)
 print(f'id that has cross : {car_hascross}')
 print('_______ ')
+print(intertest)
 
 
 vdo.release()
