@@ -15,7 +15,7 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/G9.mp4')
+# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
@@ -48,6 +48,7 @@ carhit = []
 carinpark = []
 car_hascross=[]
 intertest =[]
+line2first =[]
 
 
 try:
@@ -123,9 +124,8 @@ def letterCheck(id,timeNow,pic_black):
                 for x in range(len(cross_car)):
                     file.write(f'{cross_car[x][0]} {timeNow}\n')
         else:
-            with open('plateSave', 'w',encoding='utf-8') as file:
-                for x in range(len(cross_car)):
-                    file.write(f'{cross_car[x][0]} {timeNow}\n')
+            with open('plateSave', 'a',encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
         current_time = datetime.now()
@@ -271,6 +271,7 @@ while True:
 
             # line 2 check dont know why
             if is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+                line2first.append(id)
                 cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 for x in carhit:
                     if x == id:
@@ -330,16 +331,12 @@ while True:
                     
 
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id in line2first:
+                        cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        
+                    elif not id in carhit:
                         carhit.append(id)
                         cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-                # if is_line_intersecting_bbox(car, line2):
-                #     cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                #     for x in carhit:
-                #         if x == id:
-                #             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                #             letterCheck(id,timeNow,pic_black)
 
         print(timeNow)
         cv.imshow('Full Scene', pic)

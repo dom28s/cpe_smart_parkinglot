@@ -44,8 +44,7 @@ yellow = (0, 255, 255)  # undefined occupancy
 carhit = []
 carinpark = []
 car_hascross=[]
-intertest =[]
-
+line2first =[]
 
 try:
     with open('line.json', 'r') as f:
@@ -102,9 +101,8 @@ def letterCheck(id,timeNow,pic_black):
                 for x in range(len(cross_car)):
                     file.write(f'{cross_car[x][0]} {timeNow}\n')
         else:
-            with open('plateSave', 'w',encoding='utf-8') as file:
-                for x in range(len(cross_car)):
-                    file.write(f'{cross_car[x][0]} {timeNow}\n')
+            with open('plateSave', 'a',encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
         current_time = datetime.now()
@@ -222,6 +220,8 @@ while True:
 
             # line 2 check dont know why
             if is_intersecting(car_polygon, left_polygon):
+                line2first.append(id)
+                cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 for x in carhit:
                     if x == id:
                         letterCheck(id,timeNow,pic_black)
@@ -270,8 +270,11 @@ while True:
                     dataword.append(all_word.copy())
                     
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id in line2first:
+                        cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    elif not id in carhit:
                         carhit.append(id)
+                        
         print(timeNow)
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
@@ -283,8 +286,6 @@ print('_______ ')
 print(cross_car)
 print(f'id that has cross : {car_hascross}')
 print('_______ ')
-print(intertest)
-
 
 vdo.release()
 cv.destroyAllWindows()
