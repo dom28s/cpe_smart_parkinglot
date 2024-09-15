@@ -5,12 +5,13 @@ import os
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 from ultralytics import YOLO
+import time
 
 # โหลดโมเดล YOLO
-model = YOLO('model/yolov8n.pt')
+model = YOLO('model/yolov8s.pt')
 
 # เปิดกล้อง
-vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')  
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
 frame_counter = 0
@@ -24,7 +25,8 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 # กำหนดสีสำหรับแสดงผล
 green = (0, 255, 0)  # ว่าง
 red = (0, 0, 255)    # ไม่ว่าง
-yellow = (0, 255, 255)  # ความจุไม่แน่นอน
+yellow = (0, 255, 255)  # สิ่งกีดขวาง
+blue = (255,0,0) #บุตตลภายนอก
 
 points = []  # เก็บพ้อยที่ใช้ในการวาดพอลิกอน
 park_poly_pos = []    # เก็บพอลิกอนที่ระบุพื้นที่จอดรถ
@@ -80,7 +82,6 @@ load_park_from_json('park.json')
 
 
 ret, pic = vdo.read()
-pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
 while check:
     cv.imshow("Full Scene", pic)
@@ -100,20 +101,25 @@ while check:
 while True:
     try:
         ret, pic = vdo.read()
-        if not ret:
-            break
 
-        pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+        if not ret:
+            print('Faill to read try to restart')
+            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            time.sleep(5)
+
         pic_de = pic.copy()
         
         frame_counter += 1
         if frame_counter % (skip_frames + 1) != 0:
             continue
 
-        result = model.track(pic_de, conf=0.5, persist=1, classes=2)
+        result = model.track(pic_de, conf=0.5, persist=1)
+
         overlay = pic.copy()
         copy_park_data = park_data.copy()
         id_inPark = []
+        free_space = 0
+        not_free_space = 0
 
         for x in result[0].boxes:
             name = result[0].names[int(x.cls)]
@@ -122,7 +128,7 @@ while True:
 
             # แสดงชื่อและ ID ของวัตถุที่ตรวจพบ
             cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-            cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
+            # cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), green, 2)
 
             # แปลงขอบเขตของวัตถุเป็นพอลิกอนสำหรับคำนวณทับซ้อน
             pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
@@ -144,8 +150,10 @@ while True:
                             cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red) 
                             copy_park_data.pop(matching_polygon_index)  # Remove by index
                             id_inPark.append(id)  # Add to id_inPark to avoid reprocessing
+                            not_free_space +=1
                     else:
                         cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)
+                        free_space +=1
 
 
                     # หาจุดบนสุดของพอลิกอนเพื่อแสดงเปอร์เซ็นต์การทับซ้อน
@@ -162,9 +170,14 @@ while True:
             centroid = poly.centroid.coords[0]
             cv.putText(pic, f"ID {park_id}", (int(centroid[0]), int(centroid[1])), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
 
+        cv.putText(pic, f"free spaces: {free_space}", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
+        cv.putText(pic, f"not free spaces: {not_free_space}", (10, 60), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
         alpha = 0.5
         cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
         cv.imshow('Full Scene', pic)
+        print(f'\nfree : {free_space}')
+        print(f'not free : {not_free_space}')
         if cv.waitKey(1) & 0xFF == ord('p'):
             break
     except Exception as e:

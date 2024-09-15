@@ -341,8 +341,8 @@ while True:
                 #         if x == id:
                 #             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                 #             letterCheck(id,timeNow,pic_black)
+                
 
-                            
         cv.imshow('Full Scene', pic)
 
         if cv.waitKey(1) & 0xFF == ord('p'):
