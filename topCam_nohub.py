@@ -18,10 +18,6 @@ frame_counter = 0
 skip_frames = 7
 check = True
 
-# ตั้งค่าหน้าต่างสำหรับการแสดงผล
-cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
-
 # กำหนดสีสำหรับแสดงผล
 green = (0, 255, 0)  # ว่าง
 red = (0, 0, 255)    # ไม่ว่าง
@@ -81,27 +77,9 @@ def polygon_intersection_area(polygon1, polygon2):
 load_park_from_json('park.json')
 
 
-ret, pic = vdo.read()
-
-while check:
-    cv.imshow("Full Scene", pic)
-    cv.setMouseCallback('Full Scene', draw_shape)
-    if len(park_poly_pos) > 0:  # Draw polygons on the image
-        overlay = pic.copy()
-        for shape in park_poly_pos:
-            points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
-            cv.fillPoly(overlay, [points_array], yellow)
-        alpha = 0.5  # Transparency level
-        pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
-        cv.imshow("Full Scene", pic2)
-
-    if cv.waitKey(1) & 0xFF == ord('p'):
-        break
-
 while True:
     try:
         ret, pic = vdo.read()
-
         if not ret:
             print('Fail to read, trying to restart')
             vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
@@ -124,14 +102,12 @@ while True:
         # Draw all parking spaces first
         for shape_data in park_data:
             park_polygon = shape_data['polygon']
-            cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)
 
         for x in result[0].boxes:
             name = result[0].names[int(x.cls)]
             pix = x.xyxy.tolist()[0]
             id = int(x.id)
 
-            cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
             pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
 
             for shape_data in park_data:
@@ -147,16 +123,12 @@ while True:
                     if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
                         matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
                         if matching_polygon_index is not None:
-                            # Color the parking space as occupied
-                            cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red)
                             copy_park_data.pop(matching_polygon_index)
                             id_inPark.append(id)
                             not_free_space+=1
                             free_space -=1
 
-                    # Display overlap percentage
                     top_left = min(park_polygon, key=lambda p: p[1])
-                    cv.putText(pic, f"{int(overlap_percentage)}%", (top_left[0], top_left[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
 
         # Display the parking space ID in the center of the polygon
         for shape_data in park_data:
@@ -164,16 +136,8 @@ while True:
             park_id = shape_data['id']
             poly = Polygon(park_polygon)
             centroid = poly.centroid.coords[0]
-            cv.putText(pic, f"ID {park_id}", (int(centroid[0]), int(centroid[1])), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
 
-        # Display free and occupied space counts
-        cv.putText(pic, f"free spaces: {free_space}", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
-        cv.putText(pic, f"not free spaces: {not_free_space}", (10, 60), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-
-        # Blend the overlay with the original image
-        alpha = 0.5
-        cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
-        cv.imshow('Full Scene', pic)
+    
         print(f'\nfree: {free_space}')
         print(f'not free: {not_free_space}')
 
