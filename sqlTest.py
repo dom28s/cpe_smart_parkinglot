@@ -1,26 +1,24 @@
 import mysql.connector
 
-mydb = mysql.connector.connect(
-  host="100.124.147.43",  # Use the IP address without 'http://'
-  user="root",  # Replace with your MySQL username
-  database="projects",  # Replace with your database name
-  port=3306  # MySQL default port, modify if different
+# เชื่อมต่อกับฐานข้อมูล MySQL
+conn = mysql.connector.connect(
+    host="100.124.147.43",
+    user="root",
+    password="",
+    database="projects"
 )
 
-# Create a cursor object
-mycursor = mydb.cursor()
-print('sdsd')
+cursor = conn.cursor()
 
-# # Execute a query
-mycursor.execute("SELECT * FROM `admin`")
+# Query เพื่อดึงข้อมูลจากฐานข้อมูล
+cursor.execute("SELECT * FROM car")
 
-# # Fetch the results
-result = mycursor.fetchall()
+# ดึงข้อมูลทั้งหมด
+rows = cursor.fetchall()
 
-# # Print the results
-for row in result:
-     print(row[3])
+# แสดงข้อมูล
+for row in rows:
+    print(row)
 
-# # Close the connection
-mydb.close()
-
+# ปิดการเชื่อมต่อ
+conn.close()

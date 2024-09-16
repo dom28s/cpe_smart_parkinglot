@@ -118,7 +118,7 @@ while True:
         overlay = pic.copy()
         copy_park_data = park_data.copy()
         id_inPark = []
-        free_space = 0
+        free_space = len(park_data)
         not_free_space = 0
 
         for x in result[0].boxes:
@@ -137,28 +137,50 @@ while True:
                 park_polygon = shape_data['polygon']
                 park_id = shape_data['id']
 
-                inter_area = polygon_intersection_area(park_polygon, pix_polygon)
-                pix_area = polygon_area(park_polygon)
-                if pix_area > 0:
-                    overlap_percentage = (inter_area / pix_area) * 100
-                    print(f'{id} {overlap_percentage}')
+                # Reset overlap percentage for each parking space
+                max_overlap_percentage = 0
 
-                    if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
-                        # Find the index of the polygon with the same id in copy_park_data
-                        matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
-                        if matching_polygon_index is not None:
-                            cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red) 
-                            copy_park_data.pop(matching_polygon_index)  # Remove by index
-                            id_inPark.append(id)  # Add to id_inPark to avoid reprocessing
-                            not_free_space +=1
-                    else:
-                        cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)
-                        free_space +=1
+                # Check if any detected objects overlap with this parking space
+                for x in result[0].boxes:
+                    pix = x.xyxy.tolist()[0]
+                    id = int(x.id)
 
+                    pix_polygon = [[pix[0], pix[1]], [pix[2], pix[1]], [pix[2], pix[3]], [pix[0], pix[3]]]
 
-                    # หาจุดบนสุดของพอลิกอนเพื่อแสดงเปอร์เซ็นต์การทับซ้อน
-                    top_left = min(park_polygon, key=lambda p: p[1])  # หาจุดที่มี y น้อยที่สุด
-                    cv.putText(pic, f"{int(overlap_percentage)}%", (top_left[0], top_left[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
+                    inter_area = polygon_intersection_area(park_polygon, pix_polygon)
+                    park_area = polygon_area(park_polygon)
+
+                    if park_area > 0:
+                        overlap_percentage = (inter_area / park_area) * 100
+
+                    # Track the highest overlap percentage for this parking space
+                    max_overlap_percentage = max(max_overlap_percentage, overlap_percentage)
+
+                # If overlap is significant (>= 30%), mark as occupied
+                if max_overlap_percentage >= 30:
+                    top_left = min(park_polygon, key=lambda p: p[1])
+                    cv.putText(pic, f"ID {park_id} {int(max_overlap_percentage)}%", (top_left[0], top_left[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
+
+                    # Mark the parking space as occupied and remove from the copy_park_data list
+                    matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == park_id), None)
+                    if matching_polygon_index is not None:
+                        # Fill the parking space with red color to indicate it is occupied
+                        cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], red)
+                        copy_park_data.pop(matching_polygon_index)
+                        id_inPark.append(id)
+                        not_free_space += 1
+                        free_space -= 1
+
+                # If overlap is less than 30%, mark as free (green)
+                else:
+                    # Display the free parking space as green
+                    cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], green)
+
+                    # Optionally show overlap percentage even if it's small
+                    if max_overlap_percentage > 0:
+                        top_left = min(park_polygon, key=lambda p: p[1])
+                        cv.putText(pic, f"ID {park_id} {int(max_overlap_percentage)}%", (top_left[0], top_left[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
+               
 
         # วาด ID ตรงกลางพอลิกอน
         for shape_data in park_data:
@@ -170,8 +192,9 @@ while True:
             centroid = poly.centroid.coords[0]
             cv.putText(pic, f"ID {park_id}", (int(centroid[0]), int(centroid[1])), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
 
-        cv.putText(pic, f"free spaces: {free_space}", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
-        cv.putText(pic, f"not free spaces: {not_free_space}", (10, 60), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+        cv.putText(pic, f"all spaces: {len(park_data)}", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
+        cv.putText(pic, f"free spaces: {free_space}", (10, 60), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2)
+        cv.putText(pic, f"not free spaces: {not_free_space}", (10, 90), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
 
         alpha = 0.5
         cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
