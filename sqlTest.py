@@ -2,9 +2,9 @@ import mysql.connector
 
 # เชื่อมต่อกับฐานข้อมูล MySQL
 conn = mysql.connector.connect(
-    host="100.124.147.43",
-    user="root",
-    password="",
+    host="localhost",
+    user="park",
+    password="B17",
     database="projects"
 )
 

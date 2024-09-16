@@ -206,7 +206,7 @@ def is_intersecting_more_than_10_percent(car_polygon, left_polygon):
         car_area = car_polygon.area
         
         # ตรวจสอบว่า intersect มากกว่า 10% หรือไม่
-        if (intersection_area / car_area) > 0.1:
+        if (intersection_area / car_area) > 0.01:
             return True
     return False
 

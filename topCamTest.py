@@ -33,20 +33,33 @@ park_poly_pos = []    # เก็บพอลิกอนที่ระบุ�
 park_data = []
 park_id = 0  # ID สำหรับพอลิกอนใหม่
 
+enter_data =[]
+enter_poly =[]
+
 def load_park_from_json(filename):
     global park_poly_pos, park_data, park_id
     if os.path.exists(filename):
-        with open(filename, 'r') as f:
-            park_data = json.load(f)
-            park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
-            if park_data:
-                park_id = max([shape['id'] for shape in park_data]) + 1  # ตั้งค่า park_id เป็นค่าถัดไป
+        if filename =='park.json':
+            with open(filename, 'r') as f:
+                park_data = json.load(f)
+                park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
+                if park_data:
+                    park_id = max([shape['id'] for shape in park_data]) + 1  # ตั้งค่า park_id เป็นค่าถัดไป
+
+        if filename =='enter.json':
+            with open(filename, 'r')as f:
+                enter_data = json.load(f)
+                enter_poly = [np.array(shape['polygon'], np.int32) for shape in enter_data]
 
 
 def save_park_to_json(filename):
-    global park_data 
-    with open(filename, 'w') as f:
-        json.dump(park_data, f)
+    global park_data ,enter_data
+    if filename =='enter.json':
+        with open(filename, 'w') as f:
+            json.dump(enter_data, f)
+    if filename =='park.json':
+        with open(filename, 'w') as f:
+            json.dump(park_data, f)
 
 
 def draw_shape(event, x, y, flags, param):
@@ -65,6 +78,18 @@ def draw_shape(event, x, y, flags, param):
             points.clear()
             save_park_to_json('park.json')  # Save polygons after adding a new one
 
+def draw_enter(event, x, y, flags, param):
+    global points, enter_poly, enter_data
+    if event == cv.EVENT_LBUTTONDOWN:
+        points.append((x, y))
+        if len(points) == 4:
+            points.append(points[0])  # Close the polygon
+            enter_poly.append(np.array(points, np.int32))  # Convert to NumPy array
+            for p in points:
+                enter_data.append(p)
+            save_park_to_json('enter.json')  # Save polygons after adding a new one
+            check =False
+            
 
 def polygon_area(polygon):
     """ คำนวณพื้นที่ของพอลิกอน """
@@ -79,6 +104,7 @@ def polygon_intersection_area(polygon1, polygon2):
 
 
 load_park_from_json('park.json')
+load_park_from_json('enter.json')
 
 
 ret, pic = vdo.read()
@@ -90,9 +116,26 @@ while check:
         overlay = pic.copy()
         for shape in park_poly_pos:
             points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
-            cv.fillPoly(overlay, [points_array], yellow)
+            cv.fillPoly(overlay, [points_array], green)
         alpha = 0.5  # Transparency level
         pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
+        cv.imshow("Full Scene", pic2)
+
+    if cv.waitKey(1) & 0xFF == ord('p'):
+        break
+
+check = True
+
+while check:
+    cv.imshow("Full Scene", pic2)
+    cv.setMouseCallback('Full Scene', draw_enter)
+    if len(enter_poly) > 0:  # Draw polygons on the image
+        overlay = pic.copy()
+        for shape in enter_poly:
+            points_array = shape.reshape((-1, 1, 2))  # Ensure corparkt shape for fillPoly
+            cv.fillPoly(overlay, [points_array], yellow)
+        alpha = 0.5  # Transparency level
+        pic2 = cv.addWeighted(pic2, 1 - alpha, overlay, alpha, 0)
         cv.imshow("Full Scene", pic2)
 
     if cv.waitKey(1) & 0xFF == ord('p'):
