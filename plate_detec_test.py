@@ -3,10 +3,24 @@ import cv2 as cv
 import json
 import numpy as np
 import time
+import difflib
 from datetime import datetime
 import os
-from PIL import Image
 from shapely.geometry import Polygon
+import mysql.connector
+from PIL import ImageFont, ImageDraw, Image
+
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    database="projects"
+)
+
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM car")
+
+rows = cursor.fetchall()
+
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -24,7 +38,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 7
+skip_frames = 15
 frame_counter = 0
 
 wordfull = ""
@@ -49,6 +63,11 @@ carinpark = []
 car_hascross=[]
 intertest =[]
 line2first =[]
+
+regis =[]
+regisID =[]
+no_regis=[]
+no_regisID =[]
 
 
 try:
@@ -76,11 +95,23 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 
+def similarity_percentage(str1, str2):
+    matcher = difflib.SequenceMatcher(None, str1, str2)
+    similarity = matcher.ratio() * 100
+    return similarity
+
+
 def letterCheck(id,timeNow,pic_black):
-    global dataword,plateName,car_id,id_cross,datacar_in_park
+    global dataword,plateName,car_id,id_cross,datacar_in_park,rows
     word = {}
     max = 0
     indexmax = 0
+
+    current_time = datetime.now()
+    day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
+    hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
+    sec=current_time.strftime('%S')
+
     for x in range(len(dataword)):
         if len(dataword[x]) >= max and dataword[x][0][1] == id:
             max = len(dataword[x])
@@ -114,6 +145,28 @@ def letterCheck(id,timeNow,pic_black):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
+
+    max_per =0
+    best_word = None
+
+    for db in rows:
+        matcher = difflib.SequenceMatcher(None, db[3], finalword)
+        per = matcher.ratio() * 100
+
+        if per>max_per:
+            max_per=per
+            best_word = db[3]
+    
+    if max_per <75 and id not in no_regisID:
+        no_regisID.append(id)
+        if not os.path.exists('no_regis'):
+            with open('no_regis', 'w',encoding='utf-8') as file:
+                file.write(f'{finalword} {timeNow}\n')
+        else:
+            with open('no_regis', 'a',encoding='utf-8') as file:
+                file.write(f'{finalword} {timeNow}\n')
+
+
     if id not in car_hascross:
         car_hascross.append(id)
         cross_car.append([finalword,timeNow]) 
@@ -128,16 +181,13 @@ def letterCheck(id,timeNow,pic_black):
                     file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
-        current_time = datetime.now()
-        day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
-        hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
-        sec=current_time.strftime('%S')
+        
 
         save_dir = f'plateCross/{day}/{hour}/'
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        save_dir = f'plateCross/{day}/{hour}/'
+
         filename = f'{finalword}_{hour}_{sec}.jpg'
         ret , pic_save = vdo.read()
         cv.imwrite(f'{save_dir}{filename}',pic_save)
@@ -207,6 +257,14 @@ def is_intersecting_more_than_10_percent(car_polygon, left_polygon):
         if (intersection_area / car_area) > 0.001:
             return True
     return False
+
+def put_thai_text(image, text, position, font_path, font_size, color):
+    image_pil = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(image_pil)
+    font = ImageFont.truetype(font_path, font_size)
+    draw.text(position, text, font=font, fill=color)
+    image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
+    return image
 
 
 ret, pic = vdo.read()
@@ -280,7 +338,7 @@ while True:
                         # CAR DETECTION
             cv.putText(pic, "%s  %.0f" % (str(name), float(e.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.rectangle(pic, (int(pix[0]), int(pix[1])), (int(pix[2]), int(pix[3])), (0, 255, 0), 2)
-            print
+
             crop_car = pic_black[int(pix[1]):int(pix[3]), int(pix[0]):int(pix[2])]
             resultP = modelP(crop_car, conf=0.5)
 
@@ -304,15 +362,13 @@ while True:
                     cname = resultC[0].names[int(y.cls)]
                     cpix = y.xyxy.tolist()[0]
                     try:
-                        if len(letter_dic[str(cname)]) > 2:
-                            all_word.append([letter_dic[str(cname)], id, 10000])
-                        else:
+                        if len(letter_dic[str(cname)]) ==1:
                             all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
                     except KeyError:
                         print("Key not found in data dictionary")
 
-                    cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    crop_plate = put_thai_text(crop_plate, letter_dic[str(cname)], (int(cpix[0]), int(cpix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
                     cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
 
                     print(letter_dic[cname])
