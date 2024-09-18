@@ -2,7 +2,7 @@ import mysql.connector
 
 # เชื่อมต่อกับฐานข้อมูล MySQL
 conn = mysql.connector.connect(
-    host="localhost",
+    host="100.124.147.43/phpmyadmin",
     user="park",
     password="B17",
     database="projects"
@@ -18,7 +18,7 @@ rows = cursor.fetchall()
 
 # แสดงข้อมูล
 for row in rows:
-    print(row)
+    print(row[3])
 
 # ปิดการเชื่อมต่อ
 conn.close()

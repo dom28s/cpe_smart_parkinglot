@@ -7,6 +7,26 @@ from datetime import datetime
 import os
 from PIL import Image
 from shapely.geometry import Polygon
+import mysql.connector
+
+conn = mysql.connector.connect(
+    host="100.124.147.43/phpmyadmin",
+    user="park",
+    password="B17",
+    database="projects"
+)
+
+cursor = conn.cursor()
+
+# Query เพื่อดึงข้อมูลจากฐานข้อมูล
+cursor.execute("SELECT * FROM car")
+
+# ดึงข้อมูลทั้งหมด
+db = cursor.fetchall()
+
+# แสดงข้อมูล
+for row in rows:
+    print(row)
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -15,8 +35,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 check = True
 check2 = True
@@ -189,10 +209,11 @@ while True:
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
-            vdo.release()
-            time.sleep(5)  
-            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-            continue 
+            # vdo.release()
+            # time.sleep(5)  
+            # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            # continue 
+            break
         
         # skip frame
         frame_counter += 1
@@ -249,9 +270,7 @@ while True:
                     cname = resultC[0].names[int(y.cls)]
                     cpix = y.xyxy.tolist()[0]
                     try:
-                        if len(letter_dic[str(cname)]) > 2:
-                            all_word.append([letter_dic[str(cname)], id, 10000])
-                        else:
+                        if len(letter_dic[str(cname)]) ==1:
                             all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
                     except KeyError:
