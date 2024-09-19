@@ -21,15 +21,13 @@ cursor.execute("SELECT * FROM car")
 
 rows = cursor.fetchall()
 
-
-
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
+vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
@@ -38,7 +36,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 15
+skip_frames = 9
 frame_counter = 0
 
 wordfull = ""
@@ -165,6 +163,9 @@ def letterCheck(id,timeNow,pic_black):
         else:
             with open('no_regis', 'a',encoding='utf-8') as file:
                 file.write(f'{finalword} {timeNow}\n')
+
+    if max_per >75:
+        finalword=word
 
 
     if id not in car_hascross:

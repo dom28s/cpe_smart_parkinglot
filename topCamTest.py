@@ -11,8 +11,8 @@ import time
 model = YOLO('model/yolov8l.pt')
 
 # เปิดกล้อง
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
 frame_counter = 0
 skip_frames = 15
