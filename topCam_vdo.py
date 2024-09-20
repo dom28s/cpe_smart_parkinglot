@@ -27,40 +27,46 @@ yellow = (0, 255, 255)  # Obstacle
 blue = (255,0,0) #บุคคลภายนอก
 purple = (128, 0, 128)
 
-points = []  # Points for drawing polygons
-park_poly_pos = []    # Parking polygons
+points = []  
+park_poly_pos = []    
 park_data = []
-park_id = 0  # ID for new polygon
+park_id = 0  
 
 enter_data = []
+enter_poly=[]
 check = True  
 
 ajan ={}
 
 def load_park_from_json(filename):
-    global park_poly_pos, park_data, park_id, enter_data
+    global park_poly_pos, park_data, park_id, enter_data,enter_poly
     if os.path.exists(filename):
         if filename == 'park.json':
             with open(filename, 'r') as f:
                 park_data = json.load(f)
                 park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
                 if park_data:
-                    park_id = max([shape['id'] for shape in park_data]) + 1  # Set park_id to the next value
+                    park_id = max([shape['id'] for shape in park_data]) + 1 
 
         if filename == 'enter.json':
             with open(filename, 'r') as f:
                 enter_data = json.load(f)
-                enter_data = [np.array(polygon, np.int32) for polygon in enter_data]  # Convert to NumPy array
+                enter_poly = [np.array(polygon, np.int32) for polygon in enter_data]  # แปลงเป็น NumPy array
+                print(f'Loaded enter_data: {enter_data}') 
+
 
 def save_park_to_json(filename):
     global park_data, enter_data
-    if filename == 'enter.json':
-        with open(filename, 'w') as f:
-            json.dump(enter_data, f)
     if filename == 'park.json':
         with open(filename, 'w') as f:
             json.dump(park_data, f)
 
+    if filename == 'enter.json':
+        with open(filename, 'w') as f:
+            json.dump(enter_data[0], f)  # บันทึกทั้งลิสต์ enter_data
+            print(f'Saving enter_data: {enter_data[0]}')
+
+            
 def draw_shape(event, x, y, flags, param):
     global points, park_poly_pos, park_id, park_data
     if event == cv.EVENT_LBUTTONDOWN:
@@ -68,25 +74,27 @@ def draw_shape(event, x, y, flags, param):
         if len(points) == 4:
             points.append(points[0])  # Close the polygon
             park_poly_pos.append(np.array(points, np.int32))  # Convert to NumPy array
-            # Add polygon data with ID
             park_data.append({
                 'id': park_id,
                 'polygon': [list(p) for p in points]
             })
-            park_id += 1  # Increment ID for the next polygon
+            park_id += 1  
             points.clear()
             save_park_to_json('park.json')  # Save polygons after adding a new one
 
 def draw_enter(event, x, y, flags, param):
-    global points, enter_data, check
+    global points, enter_data, check,enter_poly
     if event == cv.EVENT_LBUTTONDOWN:
         points.append((x, y))
+        print(points)
+        print(f'{len(points)} this is len point')
         if len(points) == 4:
-            points.append(points[0])  # Close the polygon
-            enter_data.append(np.array(points, np.int32))  # Convert to NumPy array
-            enter_data.extend(points)  # Add points directly to enter_data
-            save_park_to_json('enter.json')  # Save polygons after adding a new one
-            points.clear()  # Clear points after drawing
+            points.append(points[0])  
+            enter_data.append(points.copy())
+            enter_poly.append(np.array(points, np.int32))
+            print(f'{enter_data[0]} enter data')  
+            save_park_to_json('enter.json')  
+            points.clear()  
 
 def polygon_area(polygon):
     """ Calculate the area of a polygon """
@@ -114,7 +122,6 @@ while check:
         for shape in park_poly_pos:
             points_array = shape.reshape((-1, 1, 2))  
             cv.fillPoly(overlay, [points_array], green)
-            cv.polylines(overlay, [points_array], True, green, 2)  
         alpha = 0.5 
         pic2 = cv.addWeighted(pic, 1 - alpha, overlay, alpha, 0)
         cv.imshow("Full Scene", pic2)
@@ -125,19 +132,31 @@ while check:
 check = True 
 
 while check:
+    cv.putText(pic2, "enter" , (10,10), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
     cv.imshow("Full Scene", pic2)
-    print(len(enter_data))
+    # print(enter_poly)
+    try:
+        print(f'{enter_data[0]} len {len(enter_data[0])}')
+    except:
+        print('')
+
+    print(f'{len(enter_data)} ------------')
+    if len(enter_data)==0:
+        cv.setMouseCallback('Full Scene', draw_enter)
+
     if len(enter_data) == 5: 
+        print(f'len enter = {len(enter_data)}')
         overlay = pic2.copy()
-        for shape in enter_data:
+        for shape in enter_poly:
             points_array = shape.reshape((-1, 1, 2))  
             cv.fillPoly(overlay, [points_array], yellow)
         alpha = 0.5  
         pic2 = cv.addWeighted(pic2, 1 - alpha, overlay, alpha, 0)
         cv.imshow("Full Scene", pic2)
+        print('break')
         check = False
-    else:
-        cv.setMouseCallback('Full Scene', draw_enter)
+        break
+
     if cv.waitKey(1) & 0xFF == ord('p'):
         break
 
