@@ -34,7 +34,7 @@ vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonito
 check = True
 check2 = True
 count = 0
-skip_frames = 6
+skip_frames = 7
 frame_counter = 0
 
 wordfull = ""
@@ -67,7 +67,7 @@ no_regisID =[]
 
 
 try:
-    with open('line.json', 'r') as f:
+    with open('line_linux.json', 'r') as f:
         allline = json.load(f)
 except FileNotFoundError:
     allline = []
@@ -80,7 +80,7 @@ def similarity_percentage(str1, str2):
 
 
 def letterCheck(id,timeNow,pic_black):
-    global dataword,plateName,car_id,id_cross,datacar_in_park,rows
+    global dataword,plateName,car_id,id_cross,datacar_in_park,car_row
     word = {}
     max = 0
     indexmax = 0
@@ -127,14 +127,20 @@ def letterCheck(id,timeNow,pic_black):
     max_per =0
     best_word = None
 
-    for db in rows:
+    for db in car_row:
         matcher = difflib.SequenceMatcher(None, db[3], finalword)
         per = matcher.ratio() * 100
 
         if per>max_per:
             max_per=per
             best_word = db[3]
-    
+
+    print(f'{max_per} {best_word}')
+    print(finalword)
+    print('++++++++++')
+
+    if max_per >75 and id not in no_regisID:
+        finalword = best_word
     if max_per <75 and id not in no_regisID:
         no_regisID.append(id)
         if not os.path.exists('no_regis'):
@@ -143,7 +149,6 @@ def letterCheck(id,timeNow,pic_black):
         else:
             with open('no_regis', 'a',encoding='utf-8') as file:
                 file.write(f'{finalword} {timeNow}\n')
-
 
     if id not in car_hascross:
         car_hascross.append(id)
@@ -159,13 +164,9 @@ def letterCheck(id,timeNow,pic_black):
                     file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
-        
-
         save_dir = f'plateCross/{day}/{hour}/'
-
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
         filename = f'{finalword}_{hour}_{sec}.jpg'
         ret , pic_save = vdo.read()
         cv.imwrite(f'{save_dir}{filename}',pic_save)
@@ -256,7 +257,10 @@ while True:
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
-            break
+            vdo.release()
+            time.sleep(5)  
+            vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+            continue 
         
         # skip frame
         frame_counter += 1
@@ -264,7 +268,6 @@ while True:
             continue
 
         pic_black = pic.copy()
-
 
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
 

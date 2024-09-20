@@ -1,15 +1,8 @@
 import mysql.connector
-import difflib
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import json
 
-def similarity_percentage(str1, str2):
-    # สร้างออบเจกต์ SequenceMatcher เพื่อเปรียบเทียบ string สองตัว
-    matcher = difflib.SequenceMatcher(None, str1, str2)
-    
-    # คำนวณอัตราความเหมือนเป็นเปอร์เซ็นต์
-    similarity = matcher.ratio() * 100
-    
-    return similarity
-# เชื่อมต่อกับฐานข้อมูล MySQL
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -17,28 +10,22 @@ conn = mysql.connector.connect(
 )
 
 cursor = conn.cursor()
-
-# Query เพื่อดึงข้อมูลจากฐานข้อมูล
 cursor.execute("SELECT * FROM car")
 
-# ดึงข้อมูลทั้งหมด
-rows = cursor.fetchall()
+car_row = cursor.fetchall()
 
 
+cursor.execute("SELECT * FROM `camera`")
+camara_row = cursor.fetchall()
 
-
-# ตัวอย่างการใช้งาน
-while True:
-    finalword = input()
-    max_per =0
-    word = None
-
-    for db in rows:
-        matcher = difflib.SequenceMatcher(None, db[3], finalword)
-        per = matcher.ratio() * 100
-
-        if per>max_per:
-            max_per=per
-            word = db[3]
-    print(f'{word} {max_per} {finalword}')
-    conn.close()
+print(camara_row[0][3][0])
+print(camara_row[0][3][1])
+print(camara_row[0][3][2])
+print(camara_row[0][3][3])
+print(type(camara_row[0][3]))
+print(type(camara_row[0]))
+print(camara_row[0][3])
+print(type(camara_row[0][3]))
+line1_load = json.loads(camara_row[0][3])
+print(line1_load)
+print(type(line1_load))

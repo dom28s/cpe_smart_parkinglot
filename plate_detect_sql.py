@@ -29,8 +29,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -38,7 +38,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 9
+skip_frames = 20
 frame_counter = 0
 
 wordfull = ""
@@ -158,7 +158,13 @@ def letterCheck(id,timeNow,pic_black):
         if per>max_per:
             max_per=per
             best_word = db[3]
-    
+
+    print(f'{max_per} {best_word}')
+    print(finalword)
+    print('++++++++++')
+
+    if max_per >75 and id not in no_regisID:
+        finalword = best_word
     if max_per <75 and id not in no_regisID:
         no_regisID.append(id)
         if not os.path.exists('no_regis'):
@@ -167,10 +173,6 @@ def letterCheck(id,timeNow,pic_black):
         else:
             with open('no_regis', 'a',encoding='utf-8') as file:
                 file.write(f'{finalword} {timeNow}\n')
-
-    if max_per >75:
-        finalword=word
-
 
     if id not in car_hascross:
         car_hascross.append(id)
@@ -186,13 +188,9 @@ def letterCheck(id,timeNow,pic_black):
                     file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
-        
-
         save_dir = f'plateCross/{day}/{hour}/'
-
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
         filename = f'{finalword}_{hour}_{sec}.jpg'
         ret , pic_save = vdo.read()
         cv.imwrite(f'{save_dir}{filename}',pic_save)
@@ -310,13 +308,21 @@ while True:
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
+        line1_load = json.loads(camara_row[0][3])
+        line2_load = json.loads(camara_row[0][4])
 
         line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
         line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
-
-
+        
         cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)
         cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
+        
+        # line1 = ((line1_load[0],line1_load[1]),(line1_load[2],line1_load[3]))
+        # line2 = ((line2_load[0],line2_load[1]),(line2_load[2],line2_load[3]))
+
+        # cv.line(pic, (line1_load[0],line1_load[1]),(line1_load[2],line1_load[3]), yellow, 5)
+        # cv.line(pic, (line2_load[0],line2_load[1]),(line2_load[2],line2_load[3]), blue, 5)
+        
         cv.line(pic,(x_threshold,0),(x_threshold,int(height)),red,2)
         
         result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)

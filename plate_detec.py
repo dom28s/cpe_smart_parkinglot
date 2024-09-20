@@ -3,10 +3,24 @@ import cv2 as cv
 import json
 import numpy as np
 import time
+import difflib
 from datetime import datetime
 import os
-from PIL import Image
 from shapely.geometry import Polygon
+import mysql.connector
+from PIL import ImageFont, ImageDraw, Image
+
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    database="projects"
+)
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM car")
+car_row = cursor.fetchall()
+
+cursor.execute("SELECT * FROM `camera`")
+camara_row = cursor.fetchall()
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -15,8 +29,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -24,7 +38,7 @@ cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 check = True
 check2 = True
 count = 0
-skip_frames = 6
+skip_frames = 9
 frame_counter = 0
 
 wordfull = ""
@@ -38,6 +52,8 @@ fps_start_time = time.time()
 fps_frame_count = 0
 line = []
 x_threshold=710
+x_threshold= int(camara_row[0][5])
+
 
 green = (0, 255, 0)  # empty
 red = (0, 0, 255)    # not empty
@@ -48,8 +64,12 @@ carhit = []
 carinpark = []
 car_hascross=[]
 intertest =[]
+line2first =[]
 
-
+regis =[]
+regisID =[]
+no_regis=[]
+no_regisID =[]
 
 
 try:
@@ -77,11 +97,23 @@ def mouse_click(event, x, y, flags, param):
         check = False
 
 
+def similarity_percentage(str1, str2):
+    matcher = difflib.SequenceMatcher(None, str1, str2)
+    similarity = matcher.ratio() * 100
+    return similarity
+
+
 def letterCheck(id,timeNow,pic_black):
-    global dataword,plateName,car_id,id_cross,datacar_in_park
+    global dataword,plateName,car_id,id_cross,datacar_in_park,car_row
     word = {}
     max = 0
     indexmax = 0
+
+    current_time = datetime.now()
+    day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
+    hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
+    sec=current_time.strftime('%S')
+
     for x in range(len(dataword)):
         if len(dataword[x]) >= max and dataword[x][0][1] == id:
             max = len(dataword[x])
@@ -115,6 +147,33 @@ def letterCheck(id,timeNow,pic_black):
                 inmax = k
         finalword += word[z]['word'][inmax][0]
     print(finalword)
+
+    max_per =0
+    best_word = None
+
+    for db in car_row:
+        matcher = difflib.SequenceMatcher(None, db[3], finalword)
+        per = matcher.ratio() * 100
+
+        if per>max_per:
+            max_per=per
+            best_word = db[3]
+
+    print(f'{max_per} {best_word}')
+    print(finalword)
+    print('++++++++++')
+
+    if max_per >75 and id not in no_regisID:
+        finalword = best_word
+    if max_per <75 and id not in no_regisID:
+        no_regisID.append(id)
+        if not os.path.exists('no_regis'):
+            with open('no_regis', 'w',encoding='utf-8') as file:
+                file.write(f'{finalword} {timeNow}\n')
+        else:
+            with open('no_regis', 'a',encoding='utf-8') as file:
+                file.write(f'{finalword} {timeNow}\n')
+
     if id not in car_hascross:
         car_hascross.append(id)
         cross_car.append([finalword,timeNow]) 
@@ -125,24 +184,17 @@ def letterCheck(id,timeNow,pic_black):
                 for x in range(len(cross_car)):
                     file.write(f'{cross_car[x][0]} {timeNow}\n')
         else:
-            with open('plateSave', 'w',encoding='utf-8') as file:
-                for x in range(len(cross_car)):
-                    file.write(f'{cross_car[x][0]} {timeNow}\n')
+            with open('plateSave', 'a',encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
         print('----=------=------=----')
 
-        current_time = datetime.now()
-        day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
-        hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
-        sec=current_time.strftime('%S')
-
         save_dir = f'plateCross/{day}/{hour}/'
-
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        save_dir = f'plateCross/{day}/{hour}/'
         filename = f'{finalword}_{hour}_{sec}.jpg'
         ret , pic_save = vdo.read()
         cv.imwrite(f'{save_dir}{filename}',pic_save)
+    
     
 
 
@@ -206,9 +258,17 @@ def is_intersecting_more_than_10_percent(car_polygon, left_polygon):
         car_area = car_polygon.area
         
         # ตรวจสอบว่า intersect มากกว่า 10% หรือไม่
-        if (intersection_area / car_area) > 0.01:
+        if (intersection_area / car_area) > 0.001:
             return True
     return False
+
+def put_thai_text(image, text, position, font_path, font_size, color):
+    image_pil = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(image_pil)
+    font = ImageFont.truetype(font_path, font_size)
+    draw.text(position, text, font=font, fill=color)
+    image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
+    return image
 
 
 ret, pic = vdo.read()
@@ -229,6 +289,8 @@ while True:
         ret, pic = vdo.read()
         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
@@ -271,10 +333,10 @@ while True:
 
             # line 2 check dont know why
             if is_intersecting_more_than_10_percent(car_polygon, left_polygon):
+                line2first.append(id)
                 cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 for x in carhit:
                     if x == id:
-                        timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
                         letterCheck(id,timeNow,pic_black)
 
                         # CAR DETECTION
@@ -304,15 +366,13 @@ while True:
                     cname = resultC[0].names[int(y.cls)]
                     cpix = y.xyxy.tolist()[0]
                     try:
-                        if len(letter_dic[str(cname)]) > 2:
-                            all_word.append([letter_dic[str(cname)], id, 10000])
-                        else:
+                        if len(letter_dic[str(cname)]) ==1:
                             all_word.append([letter_dic[str(cname)], id, cpix[0]])
 
                     except KeyError:
                         print("Key not found in data dictionary")
 
-                    cv.putText(crop_plate, str(cname), (int(cpix[0]), int(cpix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    crop_plate = put_thai_text(crop_plate, letter_dic[str(cname)], (int(cpix[0]), int(cpix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
                     cv.rectangle(crop_plate, (int(cpix[0]), int(cpix[1])), (int(cpix[2]), int(cpix[3])), (0, 255, 0), 1)
 
                     print(letter_dic[cname])
@@ -331,18 +391,14 @@ while True:
                     
 
                 if is_line_intersecting_bbox(car, line1):
-                    if not id in carhit:
+                    if id in line2first:
+                        cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        
+                    elif not id in carhit:
                         carhit.append(id)
                         cv.putText(pic, f"hit 1 : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-                # if is_line_intersecting_bbox(car, line2):
-                #     cv.putText(pic, f"hit 2 : {id}", (1000, 1030), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                #     for x in carhit:
-                #         if x == id:
-                #             timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-                #             letterCheck(id,timeNow,pic_black)
-
-                            
+        print(timeNow)
         cv.imshow('Full Scene', pic)
 
         if cv.waitKey(1) & 0xFF == ord('p'):
