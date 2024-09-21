@@ -11,18 +11,18 @@ import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
 
 # linux
-# conn = mysql.connector.connect(
-#     host="localhost",
-#     user="park",
-#     password="B17",
-#     database="projects"
-# )
-
 conn = mysql.connector.connect(
     host="localhost",
-    user="root",
+    user="park",
+    password="B17",
     database="projects"
 )
+
+# conn = mysql.connector.connect(
+#     host="localhost",
+#     user="root",
+#     database="projects"
+# )
 
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM car")
