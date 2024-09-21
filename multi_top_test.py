@@ -6,22 +6,36 @@ from shapely.geometry import Polygon
 from ultralytics import YOLO
 import time
 import multi_variable
+from datetime import datetime
 
 
 def topProgram():
+    plate_cross =[]
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
 
-    print(multi_variable.finalword)
-    print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+    while multi_variable.finalword == None:
+        time.sleep(1)
+        continue
+
+    if multi_variable.finalword != None:
+        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+        print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+        plate_cross.append(multi_variable.finalword)
+        multi_variable.finalword = None
+        print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+  
         
     model = YOLO('model/yolov8m.pt')
 
     vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
     frame_counter = 0
-    skip_frames = 15
+    skip_frames = 7
     check = True
+
 
     cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
     cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -76,14 +90,21 @@ def topProgram():
 
 
     while True:
+        if multi_variable.stop_threads:
+            break
         try:
+            print(plate_cross)
+            timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
+            # print(f'{timeNow} time topppppppppppppppppppppppp')
             ret, pic = vdo.read()
             pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+
 
             if not ret:
                 print('Fail to read, trying to restart')
                 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-                time.sleep(5)
+                time.sleep(1)
+                continue
 
             pic_de = pic.copy()
             
@@ -124,7 +145,7 @@ def topProgram():
 
                 if enter_percentage >= 30:
                     ajan[id] = True  # Mark car as tracked
-                    print(f'{id} entered, percent {enter_percentage}')
+                    # print(f'{id} entered, percent {enter_percentage}')
                     cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
                 else:
                     if id not in ajan:
@@ -138,16 +159,16 @@ def topProgram():
                     inter_area = polygon_intersection_area(park_polygon, car_poly)
                     pix_area = polygon_area(park_polygon)
 
-                    print(f'{ajan} ==============')
+                    # print(f'{ajan} ==============')
                     
                     if pix_area > 0:
                         overlap_percentage = (inter_area / pix_area) * 100
-                        print(f'{id} overlap percentage {overlap_percentage}')
+                        # print(f'{id} overlap percentage {overlap_percentage}')
 
                         if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
                             matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
                             if matching_polygon_index is not None:
-                                print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
+                                # print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
                                 not_free_space += 1
                                 free_space -= 1
                                 id_inPark.append(id)
@@ -161,12 +182,17 @@ def topProgram():
 
             cv.imshow('Full Scene', pic)
             if cv.waitKey(1) & 0xFF == ord('q'):
+                print(f'{plate_cross} this is plate cross')
+                print(f'{len(plate_cross)} this is len plate cross')
+                multi_variable.stop_threads = True  # ตั้งค่า flag
                 break
 
         except Exception as e:
             print(f'Error: {e}')
             break
-
+    print(plate_cross)
     vdo.release()
     cv.destroyAllWindows()
-topProgram()
+
+if __name__ == "__main__":
+    topProgram()

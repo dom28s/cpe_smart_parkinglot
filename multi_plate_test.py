@@ -48,8 +48,6 @@ def plateProgram():
     dataword = []
     plateName =''
     datacar_in_park = []
-    fps_start_time = time.time()
-    fps_frame_count = 0
     line = []
     x_threshold=710
 
@@ -65,6 +63,7 @@ def plateProgram():
 
 
     no_regisID=[]
+    multi =[]
 
     try:
         with open('line.json', 'r') as f:
@@ -123,7 +122,6 @@ def plateProgram():
         max_per = 0
         best_word = None
 
-        # Comparing finalword to database entries
         for db in car_row:
             matcher = difflib.SequenceMatcher(None, db[3], finalword)
             per = matcher.ratio() * 100
@@ -132,12 +130,9 @@ def plateProgram():
                 max_per = per
                 best_word = db[3]
 
-        print(f'{max_per} {best_word}')
-        multi_variable.finalword = finalword
-        print(finalword)
         print('++++++++++')
+        print(finalword)
 
-        # Decision making based on match percentage
         if max_per >= 75 and id not in no_regisID:
             finalword = best_word
 
@@ -150,9 +145,14 @@ def plateProgram():
                 with open('no_regis', 'a', encoding='utf-8') as file:
                     file.write(f'{finalword} {timeNow}\n')
 
-            # Track cars that have crossed
         if id not in car_hascross:
+            # print('crosssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss')
+            # print('crosssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss')
+            # print('crosssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss')
             car_hascross.append(id)
+            multi_variable.finalword = finalword
+            multi.append(multi_variable.finalword)
+
             cross_car.append([finalword, timeNow])
             print('----=------=------=----')
             print(cross_car)
@@ -165,7 +165,6 @@ def plateProgram():
                     file.write(f'{finalword} {timeNow}\n')
             print('----=------=------=----')
 
-            # Save the plate image
             current_time = datetime.now()
             day = current_time.strftime('%d-%m-%Y')
             hour = current_time.strftime('%H%M')
@@ -178,6 +177,18 @@ def plateProgram():
             filename = f'{finalword}_{hour}_{sec}.jpg'
             ret, pic_save = vdo.read()
             cv.imwrite(f'{save_dir}{filename}', pic_save)
+
+        print(finalword)
+        print(f'{max_per} {best_word}')
+        print('++++++++++')
+   
+
+        
+        print(f'{multi_variable.finalword}   this is multi variable')
+        print(f'{multi_variable.finalword} this is mult final')
+        # multi_variable.finalword = None
+
+        
 
             
 
@@ -241,16 +252,22 @@ def plateProgram():
 
 
     while True:
+        if multi_variable.stop_threads:
+            break
         try:
             ret, pic = vdo.read()
             width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
             height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
-            timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
+            timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
+            # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
+
 
 
             if not ret:
-                print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
-                break
+                print('Fail to read, trying to restart')
+                vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+                time.sleep(1)
+                continue
             
             # skip frame
             frame_counter += 1
@@ -332,7 +349,7 @@ def plateProgram():
                         elif not id in carhit:
                             carhit.append(id)
                             
-            print(timeNow)
+            # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
             if cv.waitKey(1) & 0xFF == ord('p'):
                 break
 
@@ -340,6 +357,7 @@ def plateProgram():
             print(f'Error: {e}')
 
     print('_______ ')
+    print(f'{multi} this is multi')
     print(cross_car)
     print(f'id that has cross : {car_hascross}')
     print('_______ ')
@@ -347,3 +365,5 @@ def plateProgram():
     vdo.release()
     cv.destroyAllWindows()
 
+if __name__ == "__main__":
+    plateProgram()
