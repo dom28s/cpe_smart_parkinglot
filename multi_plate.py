@@ -8,7 +8,24 @@ import os
 from PIL import Image
 from shapely.geometry import Polygon
 import multi_variable
+import mysql.connector
+import difflib
+
+
+
 def plateProgram():
+    conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    database="projects"
+    )
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM car")
+    car_row = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM `camera`")
+    camara_row = cursor.fetchall()
+
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
 
@@ -46,6 +63,9 @@ def plateProgram():
     car_hascross=[]
     line2first =[]
 
+
+    no_regisID=[]
+
     try:
         with open('line.json', 'r') as f:
             allline = json.load(f)
@@ -53,21 +73,27 @@ def plateProgram():
         allline = []
 
 
-    def letterCheck(id,timeNow,pic_black):
-        dataword,plateName,car_id,id_cross,datacar_in_park
+    def letterCheck(id, timeNow, pic_black):
+        # Ensure all required variables are initialized
+        dataword, plateName, car_id, id_cross, datacar_in_park
         word = {}
         max = 0
         indexmax = 0
+        finalword = ""  # Initialize finalword here
+
+        # Processing dataword
         for x in range(len(dataword)):
             if len(dataword[x]) >= max and dataword[x][0][1] == id:
                 max = len(dataword[x])
                 indexmax = x
+        
         for x in range(len(dataword[indexmax])):
-            word[x] = {"x" : dataword[indexmax][x][2],
-                    "word" : [[dataword[indexmax][x][0],1]]}
+            word[x] = {"x": dataword[indexmax][x][2], "word": [[dataword[indexmax][x][0], 1]]}
+
         print("===============================================")
         print(word)
         print("===============================================")
+
         for x in dataword:
             if x[0][1] == id:
                 for y in x:
@@ -80,9 +106,10 @@ def plateProgram():
                                     o = False
                                     break
                             if o:
-                                word[z]['word'].append([y[0],1])
-        finalword = ""
-        for z in range(max): 
+                                word[z]['word'].append([y[0], 1])
+
+        # Construct finalword
+        for z in range(max):
             maxd = 0
             inmax = 0
             for k in range(len(word[z]['word'])):
@@ -90,36 +117,69 @@ def plateProgram():
                     maxd = word[z]['word'][k][1]
                     inmax = k
             finalword += word[z]['word'][inmax][0]
-            multi_variable.finalword = finalword
+        
         print(finalword)
+
+        max_per = 0
+        best_word = None
+
+        # Comparing finalword to database entries
+        for db in car_row:
+            matcher = difflib.SequenceMatcher(None, db[3], finalword)
+            per = matcher.ratio() * 100
+
+            if per > max_per:
+                max_per = per
+                best_word = db[3]
+
+        print(f'{max_per} {best_word}')
+        multi_variable.finalword = finalword
+        print(finalword)
+        print('++++++++++')
+
+        # Decision making based on match percentage
+        if max_per >= 75 and id not in no_regisID:
+            finalword = best_word
+
+        if max_per < 75 and id not in no_regisID:
+            no_regisID.append(id)
+            if not os.path.exists('no_regis'):
+                with open('no_regis', 'w', encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
+            else:
+                with open('no_regis', 'a', encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
+
+            # Track cars that have crossed
         if id not in car_hascross:
             car_hascross.append(id)
-            cross_car.append([finalword,timeNow]) 
+            cross_car.append([finalword, timeNow])
             print('----=------=------=----')
             print(cross_car)
             if not os.path.exists('plateSave'):
-                with open('plateSave', 'w',encoding='utf-8') as file:
+                with open('plateSave', 'w', encoding='utf-8') as file:
                     for x in range(len(cross_car)):
                         file.write(f'{cross_car[x][0]} {timeNow}\n')
             else:
-                with open('plateSave', 'a',encoding='utf-8') as file:
-                        file.write(f'{finalword} {timeNow}\n')
+                with open('plateSave', 'a', encoding='utf-8') as file:
+                    file.write(f'{finalword} {timeNow}\n')
             print('----=------=------=----')
 
+            # Save the plate image
             current_time = datetime.now()
-            day= current_time.strftime('%d-%m-%Y')  # Format: YYYY-MM-DD
-            hour= current_time.strftime('%H%M')  # Format: HH (24-hour format)
-            sec=current_time.strftime('%S')
+            day = current_time.strftime('%d-%m-%Y')
+            hour = current_time.strftime('%H%M')
+            sec = current_time.strftime('%S')
 
             save_dir = f'plateCross/{day}/{hour}/'
-
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            save_dir = f'plateCross/{day}/{hour}/'
+
             filename = f'{finalword}_{hour}_{sec}.jpg'
-            ret , pic_save = vdo.read()
-            cv.imwrite(f'{save_dir}{filename}',pic_save)
-        
+            ret, pic_save = vdo.read()
+            cv.imwrite(f'{save_dir}{filename}', pic_save)
+
+            
 
     def is_line_intersecting_bbox(car, line):
         x1, y1, x2, y2 = car
@@ -247,10 +307,9 @@ def plateProgram():
                         cname = resultC[0].names[int(y.cls)]
                         cpix = y.xyxy.tolist()[0]
                         try:
-                            if len(letter_dic[str(cname)]) > 2:
-                                all_word.append([letter_dic[str(cname)], id, 10000])
-                            else:
+                            if len(letter_dic[str(cname)]) ==1:
                                 all_word.append([letter_dic[str(cname)], id, cpix[0]])
+
 
                         except KeyError:
                             print("Key not found in data dictionary")
@@ -289,3 +348,4 @@ def plateProgram():
     cv.destroyAllWindows()
 
 
+plateProgram()

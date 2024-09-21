@@ -255,3 +255,6 @@ def topProgram():
 
     vdo.release()
     cv.destroyAllWindows()
+
+
+topProgram()
