@@ -27,7 +27,7 @@ conn = mysql.connector.connect(
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM car")
 
-rows = cursor.fetchall()
+car_row = cursor.fetchall()
 
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
