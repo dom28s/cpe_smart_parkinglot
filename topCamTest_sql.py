@@ -13,23 +13,31 @@ import mysql.connector
 
 def topProgram():
     conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        database="projects"
+    host="localhost",
+    user="root",
+    database="projects"
     )
-
     cursor = conn.cursor()
+    cursor.execute("SELECT * FROM car")
+    car_row = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM `camera`")
+    cam = cursor.fetchall()
+
     cursor.execute("SELECT * FROM `parkingspace`")
     cam2 = cursor.fetchall()
+
+
     plate_cross =[]
+
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
 
-  
         
     model = YOLO('model/yolov8m.pt')
 
-    vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+    # vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+    vdo = cv.VideoCapture(cam[0][1])
 
     frame_counter = 0
     skip_frames = 7
@@ -46,31 +54,14 @@ def topProgram():
     blue = (255,0,0) #บุคคลภายนอก
     purple = (128, 0, 128)
 
+        
     points = []  
-  
     park_data = []
     park_id = 0  
-
     enter_data = []
-   
     check = True  
-
     ajan ={}
-
-    def load_park_from_json(filename):
-        global park_data, enter_data
-        if os.path.exists(filename):
-            if filename == 'park.json':
-                with open(filename, 'r') as f:
-                    park_data = json.load(f)
-                return park_data
-
-            if filename == 'enter.json':
-                with open(filename, 'r') as f:
-                    enter_data = json.load(f)
-                    print(f'Loaded enter_data: {enter_data}') 
-                    return enter_data
-
+    
 
 
     def polygon_area(polygon):
@@ -83,47 +74,68 @@ def topProgram():
         poly2 = Polygon(polygon2)
         intersection = poly1.intersection(poly2)
         return intersection.area
-    
-    def load_park_from_sql():
-        global park_poly_pos,park_data,enter_data
+
+    def load_from_sql():
         data = []       
         for row in cam2:
             if row[2] != '':
                 data.append(row)
             else:
                 enter_data.append(json.loads(row[4]))
-
         for row in data:
             id_value = row[0]
             point_value = eval(row[2]) if row[2] != '' else []
             park_data.append({"id": id_value, "polygon": point_value})
+
+        return enter_data,park_data
+    
+
+    def scale_polygon(polygon, old_size, new_size):
+        old_width, old_height = old_size
+        new_width, new_height = new_size
         
-        enter_poly_pos = [np.array(shape['polygon'], np.int32) for shape in enter_data[0]]
-        park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
-        return park_data,enter_data
+        scale_x = new_width / old_width
+        scale_y = new_height / old_height
 
+        scaled_polygon = []
+        for point in polygon:
+            scaled_point = [
+                int(point[0] * scale_x),
+                int(point[1] * scale_y)
+            ]
+            scaled_polygon.append(scaled_point)
 
-    park_data=load_park_from_json('park.json')
-    enter_data=load_park_from_json('enter.json')
+        return [scaled_polygon]
+    
+    def scale_all_polygons(park_data, old_size, new_size):
+        scaled_polygons = []
+        for shape_data in park_data:
+            scaled_polygon = scale_polygon(shape_data['polygon'], old_size, new_size)
+            scaled_polygons.append(scaled_polygon)
+        return scaled_polygons
+
+        
+    enter_data,park_data=load_from_sql()
+    print(type(enter_data))
+    print(park_data)
 
 
     while True:
-        print('this is top program')
-        if multi_variable.stop_threads:
-            break
         try:
-            print(plate_cross)
             timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
-            # print(f'{timeNow} time topppppppppppppppppppppppp')
             ret, pic = vdo.read()
-            pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
-
-
             if not ret:
                 print('Fail to read, trying to restart')
-                vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+                vdo = cv.VideoCapture(cam[0][1])
                 time.sleep(1)
                 continue
+
+            width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
+            height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+
+            w_web = int(cam[1][7])  # แปลงเป็นจำนวนเต็ม
+            h_web = int(cam[1][8])  # แปลงเป็นจำนวนเต็ม
+
 
             pic_de = pic.copy()
             
@@ -139,16 +151,22 @@ def topProgram():
             free_space = len(park_data)
             not_free_space = 0
 
-            
-            # turn enter to polygon
-            enter_poly = Polygon(enter_data)  
+            pre_enter_poly = scale_polygon(enter_data[0], (w_web, h_web), (int(width), int(height))) 
+
+            enter_poly = Polygon(pre_enter_poly[0]) 
             cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], purple)
+
+            scaled_park_data = []
+            scaled_park_data = scale_all_polygons(park_data, (w_web, h_web), (int(width), int(height)))
+
 
             # turn park to poly
             for shape_data in park_data:
-                park_polygon = np.array(shape_data['polygon'], np.int32)  # Ensure correct format
-                park_poly = Polygon(park_polygon)  
-                cv.fillPoly(overlay, [np.array(park_poly.exterior.coords, np.int32)], green)
+ 
+                for x in scaled_park_data:
+                    park_polygon = np.array(x[0], np.int32)
+                    park_poly = Polygon(park_polygon)  
+                    cv.fillPoly(overlay, [np.array(park_poly.exterior.coords, np.int32)], green)
 
             for x in result[0].boxes:
                 name = result[0].names[int(x.cls)]
@@ -214,12 +232,6 @@ def topProgram():
 
             cv.imshow('Full Scene', pic)
             if cv.waitKey(1) & 0xFF == ord('q'):
-                with open('multi_save.txt', 'w', encoding='utf-8') as file:
-                    for x in range(plate_cross):
-                        file.write(x)
-                print(f'{plate_cross} this is plate cross')
-                print(f'{len(plate_cross)} this is len plate cross')
-                multi_variable.stop_threads = True  # ตั้งค่า flag
                 break
 
         except Exception as e:

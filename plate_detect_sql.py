@@ -20,7 +20,7 @@ cursor.execute("SELECT * FROM car")
 car_row = cursor.fetchall()
 
 cursor.execute("SELECT * FROM `camera`")
-camara_row = cursor.fetchall()
+cam = cursor.fetchall()
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -30,7 +30,9 @@ model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+
+vdo = cv.VideoCapture(cam[1][1])
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -51,8 +53,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold=710
-x_threshold= int(camara_row[0][5])
+x_threshold= int(cam[1][5])
 
 
 green = (0, 255, 0)  # empty
@@ -269,6 +270,20 @@ def put_thai_text(image, text, position, font_path, font_size, color):
     image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
     return image
 
+def scale_line(line, old_size, new_size):
+    old_width, old_height = old_size
+    new_width, new_height = new_size
+            
+    scale_x = new_width / old_width
+    scale_y = new_height / old_height
+            
+    scaled_line = [
+        int(line[0] * scale_x), int(line[1] * scale_y),
+        int(line[2] * scale_x), int(line[3] * scale_y)
+    ]
+  
+    return scaled_line
+
 
 ret, pic = vdo.read()
 pic2 = pic.copy()
@@ -288,8 +303,17 @@ while True:
         ret, pic = vdo.read()
         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+
+        w_web = (cam[1][7])
+        h_web = (cam[1][8])
+        
         timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
 
+        line1_load = json.loads(cam[1][3])
+        line2_load = json.loads(cam[1][4])
+
+        line1 = scale_line(line1_load,(w_web,h_web), (width,height) )
+        line2 = scale_line(line2_load,(w_web,h_web), (width,height) )
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
@@ -301,6 +325,7 @@ while True:
             continue
 
         pic_black = pic.copy()
+        result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
 
         cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
@@ -308,21 +333,16 @@ while True:
         cv.putText(pic, "Press H To Exit", (5,60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-        line1_load = json.loads(camara_row[0][3])
-        line2_load = json.loads(camara_row[0][4])
+        
+        # line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
+        # line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
 
-        line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
-        line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+        # cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)
+        # cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
         
-        cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)
-        cv.line(pic, (allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]), blue, 5)
-        
-        # line1 = ((line1_load[0],line1_load[1]),(line1_load[2],line1_load[3]))
-        # line2 = ((line2_load[0],line2_load[1]),(line2_load[2],line2_load[3]))
 
-        # cv.line(pic, (line1_load[0],line1_load[1]),(line1_load[2],line1_load[3]), yellow, 5)
-        # cv.line(pic, (line2_load[0],line2_load[1]),(line2_load[2],line2_load[3]), blue, 5)
-        
+        cv.line(pic, (line1[0], line1[1]), (line1[2], line1[3]), yellow, 5)
+        cv.line(pic, (line2[0], line2[1]), (line2[2], line2[3]), blue, 5)
         cv.line(pic,(x_threshold,0),(x_threshold,int(height)),red,2)
         
         result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)

@@ -23,6 +23,12 @@ cursor.execute("SELECT * FROM `camera`")
 camara_row = cursor.fetchall()
 
 
+
+
+
+
+
+
 with open('class.json', 'r', encoding='utf-8') as file:
     letter_dic = json.load(file)
 
@@ -30,10 +36,14 @@ model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 # vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
-cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+
+# vdo2 = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture(camara_row[0][1])
+
+
+# cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+# cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
 check = True
 check2 = True
@@ -292,6 +302,9 @@ while True:
         timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
 
 
+        print(f"Width: {width}, Height: {height}")
+
+
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
             break
@@ -310,8 +323,17 @@ while True:
         cv.putText(pic, "Press X To Stop", (5,120), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
 
-        line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
-        line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+        # line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
+        # line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+
+        line1_load = json.loads(camara_row[0][3])
+        line2_load = json.loads(camara_row[0][4])
+        
+        line1 = (line1_load[0],line1_load[1],(line1_load[2],line1_load[3]))
+        line2 = (line2_load[0],line2_load[1],(line2_load[2],line2_load[3]))
+  
+
+        
 
 
         cv.line(pic, (allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]), yellow, 5)

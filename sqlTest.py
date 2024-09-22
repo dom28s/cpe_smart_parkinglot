@@ -1,8 +1,8 @@
 import mysql.connector
-from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 import json
-
+park_data =[]
+enter_data =[]
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -10,22 +10,35 @@ conn = mysql.connector.connect(
 )
 
 cursor = conn.cursor()
-cursor.execute("SELECT * FROM car")
+cursor.execute("SELECT * FROM `parkingspace`")
+cam2 = cursor.fetchall()
 
-car_row = cursor.fetchall()
 
 
 cursor.execute("SELECT * FROM `camera`")
-camara_row = cursor.fetchall()
+cam = cursor.fetchall()
 
-print(camara_row[0][3][0])
-print(camara_row[0][3][1])
-print(camara_row[0][3][2])
-print(camara_row[0][3][3])
-print(type(camara_row[0][3]))
-print(type(camara_row[0]))
-print(camara_row[0][3])
-print(type(camara_row[0][3]))
-line1_load = json.loads(camara_row[0][3])
-print(line1_load)
-print(type(line1_load))
+def load_park_from_sql():
+    global park_poly_pos,park_data
+    data = []       
+    for row in cam2:
+        if row[2] != '':
+            data.append(row)
+        else:
+            enter_data.append(json.loads(row[4]))
+
+    for row in data:
+        id_value = row[0]
+        point_value = eval(row[2]) if row[2] != '' else []
+        park_data.append({"id": id_value, "polygon": point_value})
+
+    park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
+    return park_data,enter_data
+
+w_web = (cam[1][7])
+h_web = (cam[1][8])
+
+
+
+7
+8

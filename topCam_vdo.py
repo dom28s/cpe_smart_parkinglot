@@ -13,6 +13,7 @@ model = YOLO('model/yolov8m.pt')
 
 vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
+
 frame_counter = 0
 skip_frames = 15
 check = True
@@ -183,6 +184,7 @@ while True:
         id_inPark = []
         free_space = len(park_data)
         not_free_space = 0
+        # print(result)
 
         # turn enter to polygon
         if len(enter_data) >= 3:
@@ -197,10 +199,20 @@ while True:
 
         for x in result[0].boxes:
             name = result[0].names[int(x.cls)]
+            cls = int(x.cls)      #add
             pix = x.xyxy.tolist()[0]
             id = int(x.id)
+            # 2 =car 
+            # 7 = truck
+            # 0 = person
+            # 1 = bicycle
+            # 3 = mortorcy
+            # 5 = bus
+
 
             car_poly = Polygon([(pix[0], pix[1]),(pix[2], pix[1]),(pix[2], pix[3]),(pix[0], pix[3])])    
+
+
             cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
 
             if len(enter_data) >= 3:
@@ -223,20 +235,34 @@ while True:
                 inter_area = polygon_intersection_area(park_polygon, car_poly)
                 pix_area = polygon_area(park_polygon)
 
-                print(f'{ajan} ==============')
+                # print(f'{ajan} ==============')
                 
                 if pix_area > 0:
                     overlap_percentage = (inter_area / pix_area) * 100
-                    print(f'{id} overlap percentage {overlap_percentage}')
+                    # print(f'{id} overlap percentage {overlap_percentage}')
 
                     if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
                         matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
                         if matching_polygon_index is not None:
-                            print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
+                            # print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
                             not_free_space += 1
                             free_space -= 1
                             id_inPark.append(id)
-                            car_color = red if ajan.get(id, False) else blue
+                            car_color = (255,255,255)
+
+                            # ADD
+                            if ajan.get(id, False) and cls ==2 or cls ==2 or cls ==7 :
+                                car_color = blue
+                                print(f'{cls} : {name} {car_color}')
+
+                            if ajan.get(id, True) and cls ==2 :
+                                car_color = red
+                                print(f'{cls} : {name} {car_color}')
+
+                            if cls != 2 and cls!=7 :
+                                car_color=yellow
+                                print(f'{cls} : {name} {car_color}')
+
                             cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
                             copy_park_data.pop(matching_polygon_index)
 

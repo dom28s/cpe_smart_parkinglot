@@ -89,7 +89,8 @@ def topProgram():
         return intersection.area
 
 
-    load_park_from_json('park.json')
+    park_data=load_park_from_json('park.json')
+    enter_data=load_park_from_json('enter.json')
 
 
     while True:
