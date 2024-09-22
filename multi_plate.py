@@ -38,7 +38,7 @@ def plateProgram():
     check = True
     check2 = True
     count = 0
-    skip_frames = 7
+    skip_frames = 15
     frame_counter = 0
 
     wordfull = ""

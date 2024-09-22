@@ -10,12 +10,15 @@ import multi_variable
 
 def topProgram():
     # โหลดโมเดล YOLO
+    plate_cross =[]
     model = YOLO('model/yolov8s.pt')
     print('===========================================================================================================================================================================\n=====================================================================\n======================================================')
     while multi_variable.finalword == None:
         time.sleep(1)
         continue
-    print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+    print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n\n")
+    plate_cross.append(multi_variable.finalword)
+    print(f'{plate_cross} plateeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' )
     multi_variable.finalword = None
     while multi_variable.finalword == None:
         time.sleep(1)
@@ -27,7 +30,7 @@ def topProgram():
 
 
     frame_counter = 0
-    skip_frames = 7
+    skip_frames = 15
     check = True
 
     # กำหนดสีสำหรับแสดงผล

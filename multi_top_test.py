@@ -14,18 +14,31 @@ def topProgram():
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
 
+    # while multi_variable.finalword == None:
+    #     time.sleep(1)
+    #     continue
+
+    # if multi_variable.finalword != None:
+    #     print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+    #     print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+    #     print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
+    #     print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+    #     plate_cross.append(multi_variable.finalword)
+    #     multi_variable.finalword = None
+    #     print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+
+    print('===========================================================================================================================================================================\n=====================================================================\n======================================================')
     while multi_variable.finalword == None:
         time.sleep(1)
         continue
-
-    if multi_variable.finalword != None:
-        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
-        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
-        print('44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444')
-        print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
-        plate_cross.append(multi_variable.finalword)
-        multi_variable.finalword = None
-        print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
+    print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n\n")
+    plate_cross.append(multi_variable.finalword)
+    print(f'{plate_cross} plateeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' )
+    multi_variable.finalword = None
+    while multi_variable.finalword == None:
+        time.sleep(1)
+        continue
+    print(f"finalword send {multi_variable.finalword}\n\n\n\n\n\n")
   
         
     model = YOLO('model/yolov8m.pt')
@@ -179,6 +192,7 @@ def topProgram():
             alpha = 0.5
             cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
             cv.putText(pic, 'FreeSpace: %s' % (str(free_space)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            cv.putText(pic, f'{plate_cross}', (50, 80), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
 
             cv.imshow('Full Scene', pic)
             if cv.waitKey(1) & 0xFF == ord('q'):
