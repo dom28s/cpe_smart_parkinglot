@@ -17,7 +17,7 @@ def plateProgram():
     conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    database="projects"
+    database="projects2"
     )
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM car")

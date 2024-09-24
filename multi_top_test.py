@@ -27,12 +27,12 @@ def topProgram():
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
         
-    model = YOLO('model/yolov8m.pt')
+    model = YOLO('model/yolov8l.pt')
 
     vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
     frame_counter = 0
-    skip_frames = 15
+    skip_frames = 20
     check = True
 
 
@@ -46,16 +46,13 @@ def topProgram():
     blue = (255,0,0) #บุคคลภายนอก
     purple = (128, 0, 128)
 
-    points = []  
   
     park_data = []
-    park_id = 0  
 
     enter_data = []
    
-    check = True  
+    frame_count = 0
 
-    ajan ={}
     car_track = {
         "is_ajan":[],
         "plate":[],
@@ -126,9 +123,6 @@ def topProgram():
         if multi_variable.stop_threads:
             break
         try:
-            # print(plate_cross)
-            timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
-            # print(f'{timeNow} time topppppppppppppppppppppppp')
             ret, pic = vdo.read()
             pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
             
@@ -145,8 +139,8 @@ def topProgram():
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-
-            result = model.track(pic_de, conf=0.5, persist=1)
+            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+                result = model.track(pic_de, conf=0.5, persist=3,)
 
             overlay = pic.copy()
             copy_park_data = park_data.copy()
@@ -201,10 +195,6 @@ def topProgram():
                                     multi_variable.finalword['plate'].remove(plate_value)
 
 
-                #     ajan[id] = True  # Mark car as tracked
-                #     print('sdsdfsd')
-                #     if len(plate_cross)!=0:
-                #         plate = plate_cross[0] 
                         cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
                 cv.putText(pic, str(car_track), (10,200), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
   
@@ -228,23 +218,6 @@ def topProgram():
                                     matching_polygon_index = index
                                     break
 
-                            
-                            # if matching_polygon_index is not None:  
-                            #     not_free_space += 1  
-                            #     free_space -= 1 
-                            #     id_inPark.append(id)  
-
-                                
-                            #     if ajan.get(id, False) and (cls == 2 or cls == 7): 
-                            #         car_color = blue  
-                            #         print(f'{cls} : {name} {car_color}')
-                            #     elif ajan.get(id, True) and cls == 2:  # If the car is tracked and is class 2
-                            #         car_color = red  
-                            #         print(f'{cls} : {name} {car_color}')
-                            #     elif cls != 2 and cls != 7: 
-                            #         car_color = yellow  
-                            #         print(f'{cls} : {name} {car_color}')
-
 
                             if matching_polygon_index is not None:
                                 not_free_space += 1
@@ -252,22 +225,26 @@ def topProgram():
                                 id_inPark.append(id)
 
                                 print(car_track)
-                                if car_track["id"] and car_track["is_ajan"] and car_track["id"] is not None and car_track["is_ajan"] is not None:
+                                if car_track["id"] and car_track["is_ajan"]:
                                     print(car_track['id'])
                                     print(car_track['is_ajan'])
+                                    
                                     for x in car_track["id"]:
                                         if x in id_inPark:
                                             k = car_track['id'].index(x)  # หา index ของ id
-
+                                            
                                             if k < len(car_track["is_ajan"]):  # ตรวจสอบว่า index ไม่เกินขอบเขต
                                                 if car_track["is_ajan"][k] == True:
                                                     car_color = red
+                                                    break  # Exit the loop since we've set the color
 
                                                 if car_track["is_ajan"][k] == False:
                                                     car_color = blue
+                                                    break  # Exit the loop since we've set the color
 
-                                if id_inPark not in car_track["id"]:  # ตรวจสอบว่ามี id_inPark ใน car_track หรือไม่
-                                    if cls == 2 or cls == 2 or cls == 7:
+                                # Check if the id is not in the car_track to set the color based on cls
+                                if id not in car_track["id"]:  # Change this to `id` from `id_inPark`
+                                    if cls == 2 or cls == 7:  # Corrected to check cls
                                         car_color = blue
                                     else:
                                         car_color = yellow
