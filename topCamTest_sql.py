@@ -8,6 +8,7 @@ import time
 import multi_variable
 from datetime import datetime
 import mysql.connector
+from PIL import ImageFont, ImageDraw, Image
 
 
 
@@ -113,8 +114,16 @@ def topProgram():
             scaled_polygon = scale_polygon(shape_data['polygon'], old_size, new_size)
             scaled_polygons.append(scaled_polygon)
         return scaled_polygons
+    
 
-        
+    def put_thai_text(image, text, position, font_path, font_size, color):
+        image_pil = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(image_pil)
+        font = ImageFont.truetype(font_path, font_size)
+        draw.text(position, text, font=font, fill=color)
+        image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
+        return image
+            
     enter_data,park_data=load_from_sql()
     print(type(enter_data))
     print(park_data)
@@ -149,6 +158,7 @@ def topProgram():
             copy_park_data = park_data.copy()
             id_inPark = []
             free_space = len(park_data)
+            print(free_space)
             not_free_space = 0
 
             pre_enter_poly = scale_polygon(enter_data[0], (w_web, h_web), (int(width), int(height))) 
@@ -159,12 +169,12 @@ def topProgram():
             scaled_park_data = []
             scaled_park_data = scale_all_polygons(park_data, (w_web, h_web), (int(width), int(height)))
 
-
+            
             # turn park to poly
-            for shape_data in park_data:
- 
+            for shape_data in park_data:                
                 for x in scaled_park_data:
                     park_polygon = np.array(x[0], np.int32)
+
                     park_poly = Polygon(park_polygon)  
                     cv.fillPoly(overlay, [np.array(park_poly.exterior.coords, np.int32)], green)
 
@@ -203,13 +213,16 @@ def topProgram():
                         overlap_percentage = (inter_area / pix_area) * 100
                         # print(f'{id} overlap percentage {overlap_percentage}')
 
-                        if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
+                        if overlap_percentage >= 50 and len(copy_park_data) > 0 and (not id in id_inPark):
                             matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
                             if matching_polygon_index is not None:
-                                # print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
                                 not_free_space += 1
+                                print(f'{free_space} free be')
                                 free_space -= 1
+
+                                print(f'{free_space} free AF')
                                 id_inPark.append(id)
+
                                 if ajan.get(id, False) and cls ==2 or cls ==2 or cls ==7 :
                                     car_color = blue
                                     print(f'{cls} : {name} {car_color}')
@@ -222,7 +235,11 @@ def topProgram():
                                     car_color=yellow
                                     print(f'{cls} : {name} {car_color}')
 
-                                cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
+                                # cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
+                                for x in scaled_park_data:
+                                    park_polygon = np.array(x[0], np.int32)
+                                    park_poly = Polygon(park_polygon)  
+                                    cv.fillPoly(overlay, [np.array(park_poly.exterior.coords, np.int32)], car_color)
                                 copy_park_data.pop(matching_polygon_index)
 
             alpha = 0.5

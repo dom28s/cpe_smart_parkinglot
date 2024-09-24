@@ -29,8 +29,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+# vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -52,7 +52,6 @@ fps_start_time = time.time()
 fps_frame_count = 0
 line = []
 x_threshold=710
-x_threshold= int(camara_row[0][5])
 
 
 green = (0, 255, 0)  # empty
@@ -73,7 +72,7 @@ no_regisID =[]
 
 
 try:
-    with open('line.json', 'r') as f:
+    with open('line_linux.json', 'r') as f:
         allline = json.load(f)
 except FileNotFoundError:
     allline = []

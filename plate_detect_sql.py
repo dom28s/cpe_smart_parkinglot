@@ -306,11 +306,14 @@ while True:
 
         w_web = (cam[1][7])
         h_web = (cam[1][8])
+
+      
         
         timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
 
         line1_load = json.loads(cam[1][3])
         line2_load = json.loads(cam[1][4])
+        
 
         line1 = scale_line(line1_load,(w_web,h_web), (width,height) )
         line2 = scale_line(line2_load,(w_web,h_web), (width,height) )

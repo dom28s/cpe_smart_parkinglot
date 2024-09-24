@@ -8,6 +8,8 @@ import time
 import multi_variable
 from datetime import datetime
 import mysql.connector
+from PIL import ImageFont, ImageDraw, Image
+
 
 
 
@@ -24,15 +26,13 @@ def topProgram():
     plate_cross =[]
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
-
-  
         
     model = YOLO('model/yolov8m.pt')
 
     vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
     frame_counter = 0
-    skip_frames = 7
+    skip_frames = 15
     check = True
 
 
@@ -101,6 +101,16 @@ def topProgram():
         enter_poly_pos = [np.array(shape['polygon'], np.int32) for shape in enter_data[0]]
         park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
         return park_data,enter_data
+    
+
+    def put_thai_text(image, text, position, font_path, font_size, color):
+        image_pil = Image.fromarray(cv.cvtColor(image, cv.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(image_pil)
+        font = ImageFont.truetype(font_path, font_size)
+        draw.text(position, text, font=font, fill=color)
+        image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
+        return image
+    # crop_plate = put_thai_text(crop_plate, letter_dic[str(cname)], (int(cpix[0]), int(cpix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
 
 
     park_data=load_park_from_json('park.json')
@@ -118,9 +128,11 @@ def topProgram():
             ret, pic = vdo.read()
             pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
-
+            if multi_variable.finalword not in plate_cross:
+                plate_cross.append(multi_variable.finalword)
             if not ret:
                 print('Fail to read, trying to restart')
+                break
                 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
                 time.sleep(1)
                 continue
@@ -155,6 +167,7 @@ def topProgram():
                 pix = x.xyxy.tolist()[0]
                 id = int(x.id)
                 cls = int(x.cls)
+                plate = None
 
                 car_poly = Polygon([(pix[0], pix[1]),(pix[2], pix[1]),(pix[2], pix[3]),(pix[0], pix[3])])    
                 cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
@@ -165,11 +178,17 @@ def topProgram():
 
                 if enter_percentage >= 30:
                     ajan[id] = True  # Mark car as tracked
-                    # print(f'{id} entered, percent {enter_percentage}')
+                    plate = plate_cross[0] 
                     cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
+                    plate_cross.pop(0)
                 else:
                     if id not in ajan:
                         ajan[id] = False
+                        # plate = plate_cross[0] 
+                        # cv.putText(pic, plate, (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
+                if plate != None:
+                    pic = put_thai_text(pic, plate, (int(pix[0]), int(pix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
 
                 # Parking space occupancy check
                 for shape_data in park_data:
@@ -183,8 +202,6 @@ def topProgram():
                     
                     if pix_area > 0:
                         overlap_percentage = (inter_area / pix_area) * 100
-                        # print(f'{id} overlap percentage {overlap_percentage}')
-
                         if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
                             matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
                             if matching_polygon_index is not None:
@@ -210,8 +227,9 @@ def topProgram():
             alpha = 0.5
             cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
             cv.putText(pic, 'FreeSpace: %s' % (str(free_space)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            
+            # pic = put_thai_text(pic, plate_cross, (50, 80),'THSarabunNew.ttf',32,(0, 255, 0))
             cv.putText(pic, f'{plate_cross}', (50, 80), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
-
             cv.imshow('Full Scene', pic)
             if cv.waitKey(1) & 0xFF == ord('q'):
                 with open('multi_save.txt', 'w', encoding='utf-8') as file:
