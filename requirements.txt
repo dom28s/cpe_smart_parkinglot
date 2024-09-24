@@ -1,0 +1,6 @@
+opencv-python
+ultralytics
+numpy
+Pillow
+shapely
+mysql-connector-python

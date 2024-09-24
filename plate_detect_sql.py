@@ -11,10 +11,12 @@ import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
 
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
+    host="100.124.147.43",
+    user="admin",
+    password = "admin",
     database="projects"
 )
+
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM car")
 car_row = cursor.fetchall()
@@ -32,7 +34,7 @@ modelC = YOLO('model/thaiChar_100b.pt')
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
 # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
-vdo = cv.VideoCapture(cam[1][1])
+vdo = cv.VideoCapture(cam[0][1])
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -53,7 +55,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold= int(cam[1][5])
+x_threshold= int(cam[0][5])
 
 
 green = (0, 255, 0)  # empty
@@ -304,19 +306,24 @@ while True:
         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
 
-        w_web = (cam[1][7])
-        h_web = (cam[1][8])
+        w_web = (cam[0][7])
+        h_web = (cam[0][8])
+
+        # pic = cv.resize(pic,(1280,720))
 
       
         
         timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
 
-        line1_load = json.loads(cam[1][3])
-        line2_load = json.loads(cam[1][4])
+        line1_load = json.loads(cam[0][3])
+        line2_load = json.loads(cam[0][4])
+        
+        line1 = json.loads(cam[0][3])
+        line2 = json.loads(cam[0][4])
         
 
-        line1 = scale_line(line1_load,(w_web,h_web), (width,height) )
-        line2 = scale_line(line2_load,(w_web,h_web), (width,height) )
+        # line1 = scale_line(line1_load,(w_web,h_web), (width,height) )
+        # line2 = scale_line(line2_load,(w_web,h_web), (width,height) )
 
         if not ret:
             print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")

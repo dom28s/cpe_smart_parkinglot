@@ -1,2 +1,5 @@
 stop_threads = False
-finalword = None
+finalword = {
+    "ajan": [],
+    "plate": []
+}

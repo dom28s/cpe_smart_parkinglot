@@ -56,6 +56,11 @@ def topProgram():
     check = True  
 
     ajan ={}
+    car_track = {
+        "is_ajan":[],
+        "plate":[],
+        "id":[]
+    }
 
     def load_park_from_json(filename):
         global park_data, enter_data
@@ -118,21 +123,19 @@ def topProgram():
 
 
     while True:
-        print('this is top program')
         if multi_variable.stop_threads:
             break
         try:
-            print(plate_cross)
+            # print(plate_cross)
             timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
             # print(f'{timeNow} time topppppppppppppppppppppppp')
             ret, pic = vdo.read()
             pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
-
-            if multi_variable.finalword not in plate_cross:
-                plate_cross.append(multi_variable.finalword)
+            
+                
             if not ret:
                 print('Fail to read, trying to restart')
-                break
+                # break
                 vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
                 time.sleep(1)
                 continue
@@ -167,28 +170,44 @@ def topProgram():
                 pix = x.xyxy.tolist()[0]
                 id = int(x.id)
                 cls = int(x.cls)
-                plate = None
 
                 car_poly = Polygon([(pix[0], pix[1]),(pix[2], pix[1]),(pix[2], pix[3]),(pix[0], pix[3])])    
-                cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
+                
+
+                if id in car_track['id']:
+                    sel_id = car_track['id'].index(id)  # หา index ของ id
+                    plate_number = car_track['plate'][sel_id]  # ดึง plate ตาม index
+                    pic = put_thai_text(pic, plate_number, (int(pix[0]), int(pix[1])), 'THSarabunNew.ttf', 48, (0, 255, 0))
+                else:
+                    cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
+                
 
                 enter_inter = polygon_intersection_area(enter_poly, car_poly)
                 enter_area = polygon_area(enter_poly)
                 enter_percentage = (enter_inter / enter_area) * 100
 
+                # just car NEED TO FIX LATER
                 if enter_percentage >= 30:
-                    ajan[id] = True  # Mark car as tracked
-                    plate = plate_cross[0] 
-                    cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
-                    plate_cross.pop(0)
-                else:
-                    if id not in ajan:
-                        ajan[id] = False
-                        # plate = plate_cross[0] 
-                        # cv.putText(pic, plate, (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+                    
+                        for ajan_value, plate_value in zip(multi_variable.finalword['ajan'], multi_variable.finalword['plate']):
+                            # ใช้ ajan_value โดยตรง
+                            if id not in car_track['id']:
+                                car_track['id'].append(id)
+                                car_track['is_ajan'].append(ajan_value)  # ใช้มันโดยตรง
+                                car_track['plate'].append(plate_value)    # ใช้มันโดยตรง
+                                if plate_value in multi_variable.finalword['plate']:
+                                    multi_variable.finalword['plate'].remove(plate_value)
 
-                if plate != None:
-                    pic = put_thai_text(pic, plate, (int(pix[0]), int(pix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
+
+                #     ajan[id] = True  # Mark car as tracked
+                #     print('sdsdfsd')
+                #     if len(plate_cross)!=0:
+                #         plate = plate_cross[0] 
+                        cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
+                cv.putText(pic, str(car_track), (10,200), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+  
 
                 # Parking space occupancy check
                 for shape_data in park_data:
@@ -200,37 +219,44 @@ def topProgram():
 
                     # print(f'{ajan} ==============')
                     
-                    if pix_area > 0:
-                        overlap_percentage = (inter_area / pix_area) * 100
-                        if overlap_percentage >= 30 and len(copy_park_data) > 0 and (not id in id_inPark):
-                            matching_polygon_index = next((index for index, data in enumerate(copy_park_data) if data['id'] == shape_data['id']), None)
-                            if matching_polygon_index is not None:
-                                # print(f'car id {id} reserved {copy_park_data[matching_polygon_index]["id"]}')
-                                not_free_space += 1
-                                free_space -= 1
-                                id_inPark.append(id)
-                                if ajan.get(id, False) and cls ==2 or cls ==2 or cls ==7 :
-                                    car_color = blue
-                                    print(f'{cls} : {name} {car_color}')
+                    if pix_area > 0:  
+                        overlap_percentage = (inter_area / pix_area) * 100  
+                        if overlap_percentage >= 30 and len(copy_park_data) > 0 and id not in id_inPark:
+                            matching_polygon_index = None
+                            for index in range(len(copy_park_data)):
+                                if copy_park_data[index]['id'] == shape_data['id']:
+                                    matching_polygon_index = index
+                                    break
 
-                                if ajan.get(id, True) and cls ==2 :
-                                    car_color = red
-                                    print(f'{cls} : {name} {car_color}')
+                            
+                            if matching_polygon_index is not None:  
+                                not_free_space += 1  
+                                free_space -= 1 
+                                id_inPark.append(id)  
 
-                                if cls != 2 and cls!=7 :
-                                    car_color=yellow
+                                
+                                if ajan.get(id, False) and (cls == 2 or cls == 7): 
+                                    car_color = blue  
+                                    print(f'{cls} : {name} {car_color}')
+                                elif ajan.get(id, True) and cls == 2:  # If the car is tracked and is class 2
+                                    car_color = red  
+                                    print(f'{cls} : {name} {car_color}')
+                                elif cls != 2 and cls != 7: 
+                                    car_color = yellow  
                                     print(f'{cls} : {name} {car_color}')
 
                                 cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
-                                copy_park_data.pop(matching_polygon_index)
+                                copy_park_data.pop(matching_polygon_index)  # Remove the polygon from the available list
+
 
             alpha = 0.5
             cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
             cv.putText(pic, 'FreeSpace: %s' % (str(free_space)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
-            
-            # pic = put_thai_text(pic, plate_cross, (50, 80),'THSarabunNew.ttf',32,(0, 255, 0))
-            cv.putText(pic, f'{plate_cross}', (50, 80), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            if len(plate_cross ) != 0:
+                pic = put_thai_text(pic, str(plate_cross), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
+            pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
             cv.imshow('Full Scene', pic)
+            print(' top pro')
             if cv.waitKey(1) & 0xFF == ord('q'):
                 with open('multi_save.txt', 'w', encoding='utf-8') as file:
                     for x in range(plate_cross):

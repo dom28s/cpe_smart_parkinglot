@@ -3,6 +3,7 @@ import multi_plate_test
 import multi_top_test
 import multi_variable
 import cv2 as cv
+import time
 
 # ตัวแปรสำหรับหยุดเธรด
 multi_variable.stop_threads = False
@@ -12,6 +13,8 @@ def main():
     thread_top = threading.Thread(target=multi_top_test.topProgram)
 
     thread_plate.start()
+    time.sleep(1)
+    print('ddd')
     thread_top.start()
 
     while True:
