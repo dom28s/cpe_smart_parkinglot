@@ -11,7 +11,7 @@ with open('class.json', 'r', encoding='utf-8') as file:
     
 model = YOLO('model/yolov8m.pt')
 
-vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+vdo = cv.VideoCapture('vdo_from_park/top.mp4')
 
 
 frame_counter = 0
@@ -112,7 +112,7 @@ load_park_from_json('park.json')
 load_park_from_json('enter.json')
 
 ret, pic = vdo.read()
-pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+# pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
 while check:
     cv.imshow("Full Scene", pic)
@@ -164,7 +164,7 @@ while check:
 while True:
     try:
         ret, pic = vdo.read()
-        pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+        # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
         if not ret:
             print('Fail to read, trying to restart')

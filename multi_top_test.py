@@ -29,7 +29,7 @@ def topProgram():
         
     model = YOLO('model/yolov8l.pt')
 
-    vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+    vdo = cv.VideoCapture('vdo_from_park/top.mp4')
 
     frame_counter = 0
     skip_frames = 20
@@ -58,6 +58,7 @@ def topProgram():
         "plate":[],
         "id":[]
     }
+    
 
     def load_park_from_json(filename):
         global park_data, enter_data
@@ -124,7 +125,7 @@ def topProgram():
             break
         try:
             ret, pic = vdo.read()
-            pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+            # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
             
                 
             if not ret:
