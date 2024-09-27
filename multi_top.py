@@ -44,7 +44,7 @@ def topProgram():
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
         
-    model = YOLO('model/yolov8m.pt')
+    model = YOLO('model/yolov8l.pt')
 
  
     vdo = cv.VideoCapture(cam[1][1])
