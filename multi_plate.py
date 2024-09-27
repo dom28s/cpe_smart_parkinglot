@@ -1,4 +1,4 @@
-from ultralytics import YOLO
+from ultralytics import YOLO,YOLOWorld
 import cv2 as cv
 import json
 import numpy as np
@@ -15,30 +15,51 @@ import difflib
 
 def plateProgram():
     conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
+    host="100.124.147.43",
+    user="admin",
+    password ="admin",
     database="projects"
-    )
+
+    # host="localhost",
+    # user="root",
+    # database="projects"
+
+
+)
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM `parkingspace`")
+    cam2 = cursor.fetchall()
+
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM car")
     car_row = cursor.fetchall()
 
     cursor.execute("SELECT * FROM `camera`")
-    camara_row = cursor.fetchall()
+    cam = cursor.fetchall()
+
 
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
 
-    model = YOLO('model/yolov8n.pt')
+
+
+    model = YOLO('model/yolov8s.pt')
+    # model = YOLOWorld("yolov8l-world.pt")
+
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    vdo = cv.VideoCapture('vdo_from_park/GF.mp4')
-    # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+    # vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
+    vdo = cv.VideoCapture(cam[0][1])
+
+
+    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     check = True
     check2 = True
     count = 0
-    skip_frames = 15
+    skip_frames = 12
     frame_counter = 0
 
     wordfull = ""
@@ -48,8 +69,6 @@ def plateProgram():
     dataword = []
     plateName =''
     datacar_in_park = []
-    fps_start_time = time.time()
-    fps_frame_count = 0
     line = []
     x_threshold=710
 
@@ -65,9 +84,10 @@ def plateProgram():
 
 
     no_regisID=[]
+    multi =[]
 
     try:
-        with open('line.json', 'r') as f:
+        with open('line_linux.json', 'r') as f:
             allline = json.load(f)
     except FileNotFoundError:
         allline = []
@@ -123,7 +143,6 @@ def plateProgram():
         max_per = 0
         best_word = None
 
-        # Comparing finalword to database entries
         for db in car_row:
             matcher = difflib.SequenceMatcher(None, db[3], finalword)
             per = matcher.ratio() * 100
@@ -132,14 +151,14 @@ def plateProgram():
                 max_per = per
                 best_word = db[3]
 
-        print(f'{max_per} {best_word}')
-        multi_variable.finalword = finalword
-        print(finalword)
         print('++++++++++')
+        print(finalword)
 
-        # Decision making based on match percentage
         if max_per >= 75 and id not in no_regisID:
             finalword = best_word
+
+ 
+
 
         if max_per < 75 and id not in no_regisID:
             no_regisID.append(id)
@@ -150,9 +169,17 @@ def plateProgram():
                 with open('no_regis', 'a', encoding='utf-8') as file:
                     file.write(f'{finalword} {timeNow}\n')
 
-            # Track cars that have crossed
         if id not in car_hascross:
             car_hascross.append(id)
+            if finalword == best_word:
+                multi_variable.finalword['plate'].append(finalword)
+                multi_variable.finalword['ajan'].append(True)
+            else:
+                multi_variable.finalword['plate'].append(finalword)
+                multi_variable.finalword['ajan'].append(False)
+
+
+            multi.append(multi_variable.finalword)
             cross_car.append([finalword, timeNow])
             print('----=------=------=----')
             print(cross_car)
@@ -165,7 +192,6 @@ def plateProgram():
                     file.write(f'{finalword} {timeNow}\n')
             print('----=------=------=----')
 
-            # Save the plate image
             current_time = datetime.now()
             day = current_time.strftime('%d-%m-%Y')
             hour = current_time.strftime('%H%M')
@@ -178,6 +204,18 @@ def plateProgram():
             filename = f'{finalword}_{hour}_{sec}.jpg'
             ret, pic_save = vdo.read()
             cv.imwrite(f'{save_dir}{filename}', pic_save)
+
+        print(finalword)
+        print(f'{max_per} {best_word}')
+        print('++++++++++')
+   
+
+        
+        print(f'{multi_variable.finalword}   this is multi variable')
+        print(f'{multi_variable.finalword} this is mult final')
+        # multi_variable.finalword = None
+
+        
 
             
 
@@ -238,31 +276,50 @@ def plateProgram():
             if (intersection_area / car_area) > 0.001:
                 return True
         return False
+    frame_count = 0
 
 
     while True:
+        if multi_variable.stop_threads:
+            break
         try:
             ret, pic = vdo.read()
             width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
             height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
-            timeNow = datetime.now().strftime("%H:%M | %d/%m/%Y")
-
+            timeNow = datetime.now().strftime("%H:%M %S | %d/%m/%Y")
 
             if not ret:
-                print("อ่านเฟรมไม่สำเร็จ กำลังพยายามใหม่...")
-                break
+                # break
+                print('Fail to read, trying to restart')
+                print('\n\n\n\n\n\n\n\n')
+                vdo = cv.VideoCapture(cam[0][1])
+                time.sleep(1)
+                continue
             
             # skip frame
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-
+            frame_counter += 1
             pic_black = pic.copy()
+            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+                result_model = model.track(pic_black, conf=0.5, persist=3,)
+
 
             cv.rectangle(pic_black, (0, 0), (x_threshold, pic.shape[0]), (0, 0, 0), thickness=cv.FILLED)
 
-            line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
-            line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+            # line1 = ((allline[0][0][0], allline[0][0][1]), (allline[0][1][0], allline[0][1][1]))
+            # line2 = ((allline[1][0][0], allline[1][0][1]), (allline[1][1][0], allline[1][1][1]))
+
+            line1 = cam[0][3]
+            line2 = cam[0][4]
+
+            line1 = json.loads(line1)
+            line2 = json.loads(line2)
+
+
+            cv.line(pic, (line1[0],line1[1]),(line1[2],line1[3]), yellow, 5)
+            cv.line(pic, (line2[0],line2[1]),(line2[2],line2[3]), blue, 5)
             
             result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
@@ -331,8 +388,9 @@ def plateProgram():
                             cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         elif not id in carhit:
                             carhit.append(id)
+            cv.imshow('Full Scene',pic)
                             
-            print(timeNow)
+            # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
             if cv.waitKey(1) & 0xFF == ord('p'):
                 break
 
@@ -340,12 +398,17 @@ def plateProgram():
             print(f'Error: {e}')
 
     print('_______ ')
-    print(cross_car)
-    print(f'id that has cross : {car_hascross}')
+    # print(f'{multi} this is multi')
+
+    for ajan , plate in multi_variable.finalword.items():
+        print(f'{ajan} ajan in multi')
+        print(f'{plate }plate in multi')
+    # print(cross_car)
+    # print(f'id that has cross : {car_hascross}')
     print('_______ ')
 
     vdo.release()
     cv.destroyAllWindows()
 
-
-plateProgram()
+if __name__ == "__main__":
+    plateProgram()

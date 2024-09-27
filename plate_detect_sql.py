@@ -10,18 +10,18 @@ from shapely.geometry import Polygon
 import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
 
-# conn = mysql.connector.connect(
-#     host="100.124.147.43",
-#     user="admin",
-#     password = "admin",
-#     database="projects"
-# )
-
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    database="projects2"
-    )
+    host="100.124.147.43",
+    user="admin",
+    password = "admin",
+    database="projects"
+)
+
+# conn = mysql.connector.connect(
+#     host="localhost",
+#     user="root",
+#     database="projects2"
+#     )
 
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM car")
@@ -39,7 +39,6 @@ modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
 
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture(cam[0][1])
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
@@ -61,7 +60,7 @@ datacar_in_park = []
 fps_start_time = time.time()
 fps_frame_count = 0
 line = []
-x_threshold= int(cam[0][5])
+x_threshold= 710
 
 
 green = (0, 255, 0)  # empty
@@ -81,29 +80,29 @@ no_regis=[]
 no_regisID =[]
 
 
-try:
-    with open('line_linux.json', 'r') as f:
-        allline = json.load(f)
-except FileNotFoundError:
-    allline = []
+# try:
+#     with open('line_linux.json', 'r') as f:
+#         allline = json.load(f)
+# except FileNotFoundError:
+#     allline = []
 
 
-def mouse_click(event, x, y, flags, param):
-    global check, line
-    if event == cv.EVENT_LBUTTONDOWN:
-        line.append([x, y])
-        cv.putText(pic2, f'{x} {y}', (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        if len(line) == 2:
-            cv.line(pic2, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
-            allline.append(line.copy())
-            line.clear()
+# def mouse_click(event, x, y, flags, param):
+#     global check, line
+#     if event == cv.EVENT_LBUTTONDOWN:
+#         line.append([x, y])
+#         cv.putText(pic2, f'{x} {y}', (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+#         if len(line) == 2:
+#             cv.line(pic2, (line[0][0], line[0][1]), (line[1][0], line[1][1]), (255, 0, 255), 5)
+#             allline.append(line.copy())
+#             line.clear()
 
-            if (len(allline)) ==2:
-                with open('line_linux.json', 'w') as f:
-                    json.dump(allline, f)
-                check = False
-    if event == cv.EVENT_RBUTTONDOWN:
-        check = False
+#             if (len(allline)) ==2:
+#                 with open('line_linux.json', 'w') as f:
+#                     json.dump(allline, f)
+#                 check = False
+#     if event == cv.EVENT_RBUTTONDOWN:
+#         check = False
 
 
 def similarity_percentage(str1, str2):
@@ -293,18 +292,18 @@ def scale_line(line, old_size, new_size):
     return scaled_line
 
 
-ret, pic = vdo.read()
-pic2 = pic.copy()
+# ret, pic = vdo.read()
+# pic2 = pic.copy()
 
-if len(allline) < 2 :
-    while check:
-        width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
-        height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
-        cv.line(pic2,(x_threshold,0),(x_threshold,int(height)),red,2)
-        cv.imshow("Full Scene", pic2)
-        cv.setMouseCallback('Full Scene', mouse_click)
-        if cv.waitKey(1) & 0xFF == ord('p'):
-            break
+# if len(allline) < 2 :
+#     while check:
+#         width = vdo.get(cv.CAP_PROP_FRAME_WIDTH)
+#         height = vdo.get(cv.CAP_PROP_FRAME_HEIGHT)
+#         cv.line(pic2,(x_threshold,0),(x_threshold,int(height)),red,2)
+#         cv.imshow("Full Scene", pic2)
+#         cv.setMouseCallback('Full Scene', mouse_click)
+#         if cv.waitKey(1) & 0xFF == ord('p'):
+#             break
 
 while True:
     try:

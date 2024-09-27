@@ -15,14 +15,14 @@ from PIL import ImageFont, ImageDraw, Image
 
 def topProgram():
     conn = mysql.connector.connect(
-    # host="100.124.147.43",
-    # user="admin",
-    # password ="admin",
-    # database="projects"
-
-    host="localhost",
-    user="root",
+    host="100.124.147.43",
+    user="admin",
+    password ="admin",
     database="projects"
+
+    # host="localhost",
+    # user="root",
+    # database="projects"
 
 
 )
@@ -44,15 +44,15 @@ def topProgram():
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
         
-    model = YOLO('model/yolov8l.pt')
+    model = YOLO('model/yolov8m.pt')
 
  
-    vdo = cv.VideoCapture(cam2[0][1])
+    vdo = cv.VideoCapture(cam[1][1])
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
     frame_counter = 0
-    skip_frames = 20
+    skip_frames = 40
     check = True
 
 
@@ -78,22 +78,6 @@ def topProgram():
         "plate":[],
         "id":[]
     }
-    
-
-    def load_park_from_json(filename):
-        global park_data, enter_data
-        if os.path.exists(filename):
-            if filename == 'park.json':
-                with open(filename, 'r') as f:
-                    park_data = json.load(f)
-                return park_data
-
-            if filename == 'enter.json':
-                with open(filename, 'r') as f:
-                    enter_data = json.load(f)
-                    print(f'Loaded enter_data: {enter_data}') 
-                    return enter_data
-
 
 
     def polygon_area(polygon):
@@ -136,10 +120,6 @@ def topProgram():
     enter_data,park_data=load_from_sql()
     
 
-
-    
-
-
     while True:
         if multi_variable.stop_threads:
             break
@@ -163,7 +143,7 @@ def topProgram():
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-            if frame_count % 60 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
                 result = model.track(pic_de, conf=0.5, persist=3,)
 
             overlay = pic.copy()
