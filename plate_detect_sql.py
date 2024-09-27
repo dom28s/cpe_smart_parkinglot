@@ -10,12 +10,18 @@ from shapely.geometry import Polygon
 import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
 
+# conn = mysql.connector.connect(
+#     host="100.124.147.43",
+#     user="admin",
+#     password = "admin",
+#     database="projects"
+# )
+
 conn = mysql.connector.connect(
-    host="100.124.147.43",
-    user="admin",
-    password = "admin",
-    database="projects"
-)
+    host="localhost",
+    user="root",
+    database="projects2"
+    )
 
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM car")
@@ -32,8 +38,8 @@ model = YOLO('model/yolov8n.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
 vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 vdo = cv.VideoCapture(cam[0][1])
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)

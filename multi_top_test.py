@@ -15,9 +15,15 @@ from PIL import ImageFont, ImageDraw, Image
 
 def topProgram():
     conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        database="projects"
+    host="100.124.147.43",
+    user="admin",
+    password ="admin",
+    database="projects"
+
+    # host="100.124.147.43",
+    # user="admin",
+    # password ="admin",
+    # database="projects"
     )
 
     cursor = conn.cursor()
@@ -30,6 +36,7 @@ def topProgram():
     model = YOLO('model/yolov8l.pt')
 
     vdo = cv.VideoCapture('vdo_from_park/top.mp4')
+    vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
 
     frame_counter = 0
     skip_frames = 20
@@ -87,23 +94,19 @@ def topProgram():
         intersection = poly1.intersection(poly2)
         return intersection.area
     
-    def load_park_from_sql():
-        global park_poly_pos,park_data,enter_data
+    def load_from_sql():
         data = []       
         for row in cam2:
             if row[2] != '':
                 data.append(row)
             else:
                 enter_data.append(json.loads(row[4]))
-
         for row in data:
             id_value = row[0]
             point_value = eval(row[2]) if row[2] != '' else []
             park_data.append({"id": id_value, "polygon": point_value})
-        
-        enter_poly_pos = [np.array(shape['polygon'], np.int32) for shape in enter_data[0]]
-        park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
-        return park_data,enter_data
+
+        return enter_data,park_data
     
 
     def put_thai_text(image, text, position, font_path, font_size, color):
@@ -116,8 +119,11 @@ def topProgram():
     # crop_plate = put_thai_text(crop_plate, letter_dic[str(cname)], (int(cpix[0]), int(cpix[1])),'THSarabunNew.ttf',32,(0, 255, 0))
 
 
-    park_data=load_park_from_json('park.json')
-    enter_data=load_park_from_json('enter.json')
+    # park_data=load_park_from_json('park.json')
+    # enter_data=load_park_from_json('enter.json')
+    enter_data,park_data = load_from_sql()
+
+    
 
 
     while True:
@@ -125,7 +131,7 @@ def topProgram():
             break
         try:
             ret, pic = vdo.read()
-            # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+            pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
             
                 
             if not ret:
@@ -140,14 +146,16 @@ def topProgram():
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+            if frame_count % 60 == 0:  # ประมวลผลทุกๆ 3 เฟรม
                 result = model.track(pic_de, conf=0.5, persist=3,)
 
             overlay = pic.copy()
             copy_park_data = park_data.copy()
             id_inPark = []
             free_space = len(park_data)
-            not_free_space = 0
+            blue_park = 0
+            red_park =0
+            yellow_park =0
 
             
             # turn enter to polygon
@@ -221,7 +229,6 @@ def topProgram():
 
 
                             if matching_polygon_index is not None:
-                                not_free_space += 1
                                 free_space -= 1
                                 id_inPark.append(id)
 
@@ -236,27 +243,41 @@ def topProgram():
                                             
                                             if k < len(car_track["is_ajan"]):  # ตรวจสอบว่า index ไม่เกินขอบเขต
                                                 if car_track["is_ajan"][k] == True:
+                                                    print(car_track["is_ajan"])
+                                                    print('======')
                                                     car_color = red
+                                                    red_park+=1
                                                     break  # Exit the loop since we've set the color
 
                                                 if car_track["is_ajan"][k] == False:
                                                     car_color = blue
+                                                    blue_park+=1
                                                     break  # Exit the loop since we've set the color
 
                                 # Check if the id is not in the car_track to set the color based on cls
                                 if id not in car_track["id"]:  # Change this to `id` from `id_inPark`
                                     if cls == 2 or cls == 7:  # Corrected to check cls
                                         car_color = blue
+                                        blue_park+=1
+                                        
                                     else:
+                                        yellow_park +=1
                                         car_color = yellow
 
+                                print(f'yeloow {yellow_park}')
+                                print(f'red {red_park}')
+                                print(f'blue {blue_park}')
+                                print(f'green {free_space}')
                                 cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
                                 copy_park_data.pop(matching_polygon_index)  # Remove the polygon from the available list
 
 
             alpha = 0.5
             cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
-            cv.putText(pic, 'FreeSpace: %s' % (str(free_space)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            cv.putText(pic, f'Green {str(free_space)}', (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            cv.putText(pic, f'Blue {str(blue_park)}', (50, 80), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
+            cv.putText(pic, f'Red: {str(red_park)}', (50, 120), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
+            cv.putText(pic, f'Yellow: {str(yellow_park)}', (50, 150), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             if len(plate_cross ) != 0:
                 pic = put_thai_text(pic, str(plate_cross), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
             pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))

@@ -17,7 +17,7 @@ def plateProgram():
     conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    database="projects2"
+    database="projects"
     )
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM car")
@@ -34,13 +34,14 @@ def plateProgram():
     model = YOLO('model/yolov8s.pt')
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
+    # vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+    vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
     check = True
     check2 = True
     count = 0
-    skip_frames = 9
+    skip_frames = 10
     frame_counter = 0
 
     wordfull = ""

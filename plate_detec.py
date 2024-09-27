@@ -38,8 +38,8 @@ modelC = YOLO('model/thaiChar_100b.pt')
 # vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
 
 
-# vdo2 = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
-vdo = cv.VideoCapture(camara_row[0][1])
+# vdo = cv.VideoCapture(camara_row[0][1])
+vdo2 = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
 # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)

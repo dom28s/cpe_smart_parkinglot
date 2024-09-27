@@ -11,7 +11,11 @@ with open('class.json', 'r', encoding='utf-8') as file:
     
 model = YOLO('model/yolov8m.pt')
 
-vdo = cv.VideoCapture('vdo_from_park/top.mp4')
+# vdo = cv.VideoCapture('vdo_from_park/top.mp4')
+vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+
+
 
 
 frame_counter = 0
@@ -42,14 +46,14 @@ ajan ={}
 def load_park_from_json(filename):
     global park_poly_pos, park_data, park_id, enter_data,enter_poly
     if os.path.exists(filename):
-        if filename == 'park.json':
+        if filename == 'park_real.json':
             with open(filename, 'r') as f:
                 park_data = json.load(f)
                 park_poly_pos = [np.array(shape['polygon'], np.int32) for shape in park_data]
                 if park_data:
                     park_id = max([shape['id'] for shape in park_data]) + 1 
 
-        if filename == 'enter.json':
+        if filename == 'enter_real.json':
             with open(filename, 'r') as f:
                 enter_data = json.load(f)
                 enter_poly = [np.array(polygon, np.int32) for polygon in enter_data]  # แปลงเป็น NumPy array
@@ -58,11 +62,11 @@ def load_park_from_json(filename):
 
 def save_park_to_json(filename):
     global park_data, enter_data
-    if filename == 'park.json':
+    if filename == 'park_real.json':
         with open(filename, 'w') as f:
             json.dump(park_data, f)
 
-    if filename == 'enter.json':
+    if filename == 'enter_real.json':
         with open(filename, 'w') as f:
             json.dump(enter_data[0], f)  # บันทึกทั้งลิสต์ enter_data
             print(f'Saving enter_data: {enter_data[0]}')
@@ -81,7 +85,7 @@ def draw_shape(event, x, y, flags, param):
             })
             park_id += 1  
             points.clear()
-            save_park_to_json('park.json')  # Save polygons after adding a new one
+            save_park_to_json('park_real.json')  # Save polygons after adding a new one
 
 def draw_enter(event, x, y, flags, param):
     global points, enter_data, check,enter_poly
@@ -108,7 +112,7 @@ def polygon_intersection_area(polygon1, polygon2):
     intersection = poly1.intersection(poly2)
     return intersection.area
 
-load_park_from_json('park.json')
+load_park_from_json('park_real.json')
 load_park_from_json('enter.json')
 
 ret, pic = vdo.read()

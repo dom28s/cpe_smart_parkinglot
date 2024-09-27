@@ -12,7 +12,9 @@ def topProgram():
         
     model = YOLO('model/yolov8m.pt')
 
+
     vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
+    vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
     frame_counter = 0
     skip_frames = 15
@@ -49,7 +51,7 @@ def topProgram():
                     if park_data:
                         park_id = max([shape['id'] for shape in park_data]) + 1 
 
-            if filename == 'enter.json':
+            if filename == 'enter_real.json':
                 with open(filename, 'r') as f:
                     enter_data = json.load(f)
                     enter_poly = [np.array(polygon, np.int32) for polygon in enter_data]  # แปลงเป็น NumPy array
@@ -62,7 +64,7 @@ def topProgram():
             with open(filename, 'w') as f:
                 json.dump(park_data, f)
 
-        if filename == 'enter.json':
+        if filename == 'enter_real.json':
             with open(filename, 'w') as f:
                 json.dump(enter_data[0], f)  # บันทึกทั้งลิสต์ enter_data
                 print(f'Saving enter_data: {enter_data[0]}')
@@ -94,7 +96,7 @@ def topProgram():
                 enter_data.append(points.copy())
                 enter_poly.append(np.array(points, np.int32))
                 print(f'{enter_data[0]} enter data')  
-                save_park_to_json('enter.json')  
+                save_park_to_json('enter_real.json')  
                 points.clear()  
 
     def polygon_area(polygon):
@@ -109,10 +111,10 @@ def topProgram():
         return intersection.area
 
     load_park_from_json('park.json')
-    load_park_from_json('enter.json')
+    load_park_from_json('enter_real.json')
 
     ret, pic = vdo.read()
-    pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+    # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
     while check:
         cv.imshow("Full Scene", pic)
@@ -164,7 +166,7 @@ def topProgram():
     while True:
         try:
             ret, pic = vdo.read()
-            pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+            # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
 
             if not ret:
                 print('Fail to read, trying to restart')

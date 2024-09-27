@@ -14,8 +14,9 @@ from PIL import ImageFont, ImageDraw, Image
 
 def topProgram():
     conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
+    hhost="100.124.147.43",
+    user="admin",
+    password ="admin",
     database="projects"
     )
     cursor = conn.cursor()
@@ -125,7 +126,6 @@ def topProgram():
         return image
             
     enter_data,park_data=load_from_sql()
-    print(type(enter_data))
     print(park_data)
 
 
