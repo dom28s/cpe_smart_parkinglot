@@ -1,6 +1,8 @@
 import threading
 import multi_plate_test
-import multi_top_test
+import multi_top
+import multi_plate
+import multi_top_flask
 import multi_variable
 import cv2 as cv
 import time
@@ -12,10 +14,6 @@ multi_variable.stop_threads = False
 
 app = Flask(__name__)
 
-# Route to stream video frames
-@app.route('/video_feed')
-def video_feed():
-    return Response(multi_top_test.generate_video_stream(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Home route
 @app.route('/')
@@ -25,6 +23,11 @@ def home():
     <img src="/video_feed" width="1000">
     """
 
+@app.route('/video_feed')
+def video_feed():
+    return Response(topProgram(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 def run_flask():
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
@@ -33,12 +36,11 @@ def main():
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
 
-    thread_plate = threading.Thread(target=multi_plate_test.plateProgram)
-    thread_top = threading.Thread(target=multi_top_test.topProgram)
+    thread_plate = threading.Thread(target=multi_plate.plateProgram)
+    thread_top = threading.Thread(target=multi_top.topProgram)
 
     thread_plate.start()
     time.sleep(1)
-    print('ddd')
     thread_top.start()
 
     while True:

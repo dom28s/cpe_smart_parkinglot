@@ -9,8 +9,10 @@ import multi_variable
 from datetime import datetime
 import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
+from flask import Flask, Response
 
 
+app = Flask(__name__)
 
 
 def topProgram():
@@ -56,8 +58,8 @@ def topProgram():
     check = True
 
 
-    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+    # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    # cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     # Define colors for display
     green = (0, 255, 0)  # Available
@@ -278,8 +280,13 @@ def topProgram():
             if len(plate_cross ) != 0:
                 pic = put_thai_text(pic, str(plate_cross), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
             pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
-            cv.imshow('Full Scene', pic)
 
+            ret, buffer = cv.imencode('.jpg', pic)
+            frame = buffer.tobytes()
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            
             # cv.imshow('Full Scene', pic)
             print(' top pro')
             if cv.waitKey(1) & 0xFF == ord('q'):
@@ -298,5 +305,7 @@ def topProgram():
     vdo.release()
     cv.destroyAllWindows()
 
-if __name__ == "__main__":
-    topProgram()
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)

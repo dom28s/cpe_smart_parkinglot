@@ -53,8 +53,8 @@ def plateProgram():
     vdo = cv.VideoCapture(cam[0][1])
 
 
-    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+    # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    # cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     check = True
     check2 = True
@@ -388,7 +388,7 @@ def plateProgram():
                             cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         elif not id in carhit:
                             carhit.append(id)
-            cv.imshow('Full Scene',pic)
+            # cv.imshow('Full Scene',pic)
                             
             # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
             if cv.waitKey(1) & 0xFF == ord('p'):
