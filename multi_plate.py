@@ -45,12 +45,10 @@ def plateProgram():
 
 
     model = YOLO('model/yolov8s.pt')
-    # model = YOLOWorld("yolov8l-world.pt")
-
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    # vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
-    vdo = cv.VideoCapture(cam[0][1])
+    vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+    # vdo = cv.VideoCapture(cam[0][1])
 
 
     # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
@@ -359,6 +357,7 @@ def plateProgram():
                     resultC = modelC(crop_plate, conf=0.5)
 
                     all_word = []
+                    
                                 # LETTER DETECTION
                     for y in resultC[0].boxes:
                         cname = resultC[0].names[int(y.cls)]

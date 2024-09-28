@@ -1,14 +1,13 @@
 import mysql.connector
 import numpy as np
 import json
-park_data =[]
-enter_data =[]
-# conn = mysql.connector.connect(
-#     host="100.124.147.43",
-#     user="admin",
-#     password = "admin",
-#     database="projects"
-# )
+
+conn = mysql.connector.connect(
+    host="100.124.147.43",
+    user="admin",
+    password = "admin",
+    database="projects"
+)
 
 conn = mysql.connector.connect(
     host="localhost",
@@ -31,16 +30,8 @@ green_sql = parkinglot_status[0][2]
 red_sql = parkinglot_status[0][3] 
 blue_sql = parkinglot_status[0][4] 
 yellow_sql = parkinglot_status[0][5] 
+ี
+cursor.execute(blue_sql,3)
 
-print(all_space)
-print(green_sql)
-print(red_sql)
-print(blue_sql)
-print(yellow_sql)
-
-
-sql_update_query = """
-UPDATE parkinglot_status
-SET column_5 = %s
-WHERE id = 0;
-""" 
+# บันทึกการเปลี่ยนแปลงในฐานข้อมูล
+conn.commit()

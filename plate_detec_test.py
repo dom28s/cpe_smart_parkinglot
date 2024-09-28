@@ -10,17 +10,7 @@ from shapely.geometry import Polygon
 import mysql.connector
 from PIL import ImageFont, ImageDraw, Image
 
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    database="projects"
-)
-cursor = conn.cursor()
-cursor.execute("SELECT * FROM car")
-car_row = cursor.fetchall()
-
-cursor.execute("SELECT * FROM `camera`")
-camara_row = cursor.fetchall()
+# S
 
 
 with open('class.json', 'r', encoding='utf-8') as file:
@@ -29,8 +19,8 @@ with open('class.json', 'r', encoding='utf-8') as file:
 model = YOLO('model/yolov8s.pt')
 modelP = YOLO('model/licen_100b.pt')
 modelC = YOLO('model/thaiChar_100b.pt')
-# vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
-vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
+vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+# vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
 cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
@@ -361,6 +351,8 @@ while True:
                 resultC = modelC(crop_plate, conf=0.5)
 
                 all_word = []
+                print(f'{all_word} this is all word \n')
+
                             # LETTER DETECTION
                 for y in resultC[0].boxes:
                     cname = resultC[0].names[int(y.cls)]

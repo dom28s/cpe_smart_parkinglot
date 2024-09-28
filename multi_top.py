@@ -12,8 +12,6 @@ from PIL import ImageFont, ImageDraw, Image
 from flask import Flask, Response
 
 
-app = Flask(__name__)
-
 
 def topProgram():
     conn = mysql.connector.connect(
@@ -48,18 +46,20 @@ def topProgram():
         
     model = YOLO('model/yolov8l.pt')
 
- 
-    vdo = cv.VideoCapture(cam[1][1])
+    print('dsdfsdf')
+    
+    # vdo = cv.VideoCapture(cam[1][1])
+    vdo = cv.VideoCapture('top.mp4')
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
     frame_counter = 0
-    skip_frames = 40
+    skip_frames = 10
     check = True
 
 
-    # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-    # cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
     # Define colors for display
     green = (0, 255, 0)  # Available
@@ -120,7 +120,6 @@ def topProgram():
     # enter_data=load_park_from_json('enter.json')
 
     enter_data,park_data=load_from_sql()
-    
 
     while True:
         if multi_variable.stop_threads:
@@ -173,7 +172,10 @@ def topProgram():
                 id = int(x.id)
                 cls = int(x.cls)
 
+                print(cls)
+
                 car_poly = Polygon([(pix[0], pix[1]),(pix[2], pix[1]),(pix[2], pix[3]),(pix[0], pix[3])])    
+                cv.fillPoly(overlay, [np.array(car_poly.exterior.coords, np.int32)], red)
 
                 
 
@@ -214,8 +216,10 @@ def topProgram():
 
                     inter_area = polygon_intersection_area(park_polygon, car_poly)
                     pix_area = polygon_area(park_polygon)
+                    inter_percentage = (inter_area / pix_area) * 100
 
                     # print(f'{ajan} ==============')
+                    print(f'{id} {inter_percentage}')
                     
                     if pix_area > 0:  
                         overlap_percentage = (inter_area / pix_area) * 100  
@@ -231,10 +235,10 @@ def topProgram():
                                 free_space -= 1
                                 id_inPark.append(id)
 
-                                print(car_track)
+                                # print(car_track)
                                 if car_track["id"] and car_track["is_ajan"]:
-                                    print(car_track['id'])
-                                    print(car_track['is_ajan'])
+                                    # print(car_track['id'])
+                                    # print(car_track['is_ajan'])
                                     
                                     for x in car_track["id"]:
                                         if x in id_inPark:
@@ -242,8 +246,8 @@ def topProgram():
                                             
                                             if k < len(car_track["is_ajan"]):  # ตรวจสอบว่า index ไม่เกินขอบเขต
                                                 if car_track["is_ajan"][k] == True:
-                                                    print(car_track["is_ajan"])
-                                                    print('======')
+                                                    # print(car_track["is_ajan"])
+                                                    # print('======')
                                                     car_color = red
                                                     red_park+=1
                                                     break  # Exit the loop since we've set the color
@@ -252,7 +256,6 @@ def topProgram():
                                                     car_color = blue
                                                     blue_park+=1
                                                     break  # Exit the loop since we've set the color
-
                                 # Check if the id is not in the car_track to set the color based on cls
                                 if id not in car_track["id"]:  # Change this to `id` from `id_inPark`
                                     if cls == 2 or cls == 7:  # Corrected to check cls
@@ -263,10 +266,10 @@ def topProgram():
                                         yellow_park +=1
                                         car_color = yellow
 
-                                print(f'yeloow {yellow_park}')
-                                print(f'red {red_park}')
-                                print(f'blue {blue_park}')
-                                print(f'green {free_space}')
+                                # print(f'yeloow {yellow_park}')
+                                # print(f'red {red_park}')
+                                # print(f'blue {blue_park}')
+                                # print(f'green {free_space}')
                                 cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
                                 copy_park_data.pop(matching_polygon_index)  # Remove the polygon from the available list
 
@@ -281,13 +284,13 @@ def topProgram():
                 pic = put_thai_text(pic, str(plate_cross), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
             pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
 
-            ret, buffer = cv.imencode('.jpg', pic)
-            frame = buffer.tobytes()
+            # ret, buffer = cv.imencode('.jpg', pic)
+            # frame = buffer.tobytes()
 
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            # yield (b'--frame\r\n'
+            #        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
             
-            # cv.imshow('Full Scene', pic)
+            cv.imshow('Full Scene', pic)
             print(' top pro')
             if cv.waitKey(1) & 0xFF == ord('q'):
                 with open('multi_save.txt', 'w', encoding='utf-8') as file:
@@ -307,5 +310,5 @@ def topProgram():
 
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+if __name__ == "__main__":
+    topProgram()
