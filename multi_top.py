@@ -28,17 +28,15 @@ def topProgram():
 )
 
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM `parkingspace`")
-    cam2 = cursor.fetchall()
-
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM car")
-    car_row = cursor.fetchall()
-
-    cursor.execute("SELECT * FROM `camera`")
+    cursor.execute("SELECT * FROM `parkingspace` WHERE `ParkingLot_ID` = 1;")
+    park = cursor.fetchall()
+    
+    # Fetch cameras where ParkingLot_ID is 1
+    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 1;")
     cam = cursor.fetchall()
 
-
+    cursor.execute("SELECT * FROM `parkinglot` WHERE `ParkingLot_ID` = 1;")
+    park_status = cursor.fetchall()
 
     plate_cross =[]
     with open('class.json', 'r', encoding='utf-8') as file:
@@ -48,13 +46,13 @@ def topProgram():
 
     print('dsdfsdf')
     
-    # vdo = cv.VideoCapture(cam[1][1])
-    vdo = cv.VideoCapture('top.mp4')
+    vdo = cv.VideoCapture(cam[1][1])
+    # vdo = cv.VideoCapture('top.mp4')
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
     frame_counter = 0
-    skip_frames = 10
+    skip_frames = 40
     check = True
 
 
@@ -68,7 +66,6 @@ def topProgram():
     blue = (255,0,0) #บุคคลภายนอก
     purple = (128, 0, 128)
 
-  
     park_data = []
 
     enter_data = []
@@ -95,7 +92,7 @@ def topProgram():
     
     def load_from_sql():
         data = []       
-        for row in cam2:
+        for row in park:
             if row[2] != None:
                 data.append(row)
             
@@ -120,6 +117,8 @@ def topProgram():
     # enter_data=load_park_from_json('enter.json')
 
     enter_data,park_data=load_from_sql()
+    cursor.execute("UPDATE `parkinglot` SET `AllSpace` = %s WHERE `ParkingLot_ID` = 1;", (len(park_data),))
+    
 
     while True:
         if multi_variable.stop_threads:
@@ -150,7 +149,7 @@ def topProgram():
             overlay = pic.copy()
             copy_park_data = park_data.copy()
             id_inPark = []
-            free_space = len(park_data)
+            green_park = len(park_data)
             blue_park = 0
             red_park =0
             yellow_park =0
@@ -216,10 +215,8 @@ def topProgram():
 
                     inter_area = polygon_intersection_area(park_polygon, car_poly)
                     pix_area = polygon_area(park_polygon)
-                    inter_percentage = (inter_area / pix_area) * 100
 
                     # print(f'{ajan} ==============')
-                    print(f'{id} {inter_percentage}')
                     
                     if pix_area > 0:  
                         overlap_percentage = (inter_area / pix_area) * 100  
@@ -232,33 +229,29 @@ def topProgram():
 
 
                             if matching_polygon_index is not None:
-                                free_space -= 1
+                                green_park -= 1
                                 id_inPark.append(id)
 
                                 # print(car_track)
                                 if car_track["id"] and car_track["is_ajan"]:
-                                    # print(car_track['id'])
-                                    # print(car_track['is_ajan'])
-                                    
                                     for x in car_track["id"]:
                                         if x in id_inPark:
-                                            k = car_track['id'].index(x)  # หา index ของ id
+                                            k = car_track['id'].index(x)  
                                             
-                                            if k < len(car_track["is_ajan"]):  # ตรวจสอบว่า index ไม่เกินขอบเขต
+                                            if k < len(car_track["is_ajan"]):  
                                                 if car_track["is_ajan"][k] == True:
-                                                    # print(car_track["is_ajan"])
-                                                    # print('======')
                                                     car_color = red
                                                     red_park+=1
-                                                    break  # Exit the loop since we've set the color
+                                                    
+                                                    break  
 
                                                 if car_track["is_ajan"][k] == False:
                                                     car_color = blue
                                                     blue_park+=1
-                                                    break  # Exit the loop since we've set the color
-                                # Check if the id is not in the car_track to set the color based on cls
-                                if id not in car_track["id"]:  # Change this to `id` from `id_inPark`
-                                    if cls == 2 or cls == 7:  # Corrected to check cls
+                                                    break 
+
+                                if id not in car_track["id"]:  
+                                    if cls == 2 or cls == 7: 
                                         car_color = blue
                                         blue_park+=1
                                         
@@ -266,17 +259,23 @@ def topProgram():
                                         yellow_park +=1
                                         car_color = yellow
 
+                                cursor.execute("UPDATE `parkinglot` SET `UnFreeSpace` = %s WHERE `ParkingLot_ID` = 1;", (red_park,))
+                                cursor.execute("UPDATE `parkinglot` SET `FreeSpace` = %s WHERE `ParkingLot_ID` = 1;", (green_park,))
+                                cursor.execute("UPDATE `parkinglot` SET `UnknowCar` = %s WHERE `ParkingLot_ID` = 1;", (blue_park,))
+                                cursor.execute("UPDATE `parkinglot` SET `UnknowObj` = %s WHERE `ParkingLot_ID` = 1;", (yellow_park,))
+                                conn.commit()
+
                                 # print(f'yeloow {yellow_park}')
                                 # print(f'red {red_park}')
                                 # print(f'blue {blue_park}')
-                                # print(f'green {free_space}')
+                                # print(f'green {green_park}')
                                 cv.fillPoly(overlay, [np.array(park_polygon, np.int32).reshape((-1, 1, 2))], car_color)
                                 copy_park_data.pop(matching_polygon_index)  # Remove the polygon from the available list
 
 
             alpha = 0.5
             cv.addWeighted(overlay, alpha, pic, 1 - alpha, 0, pic)
-            cv.putText(pic, f'Green {str(free_space)}', (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
+            cv.putText(pic, f'Green {str(green_park)}', (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA)
             cv.putText(pic, f'Blue {str(blue_park)}', (50, 80), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             cv.putText(pic, f'Red: {str(red_park)}', (50, 120), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             cv.putText(pic, f'Yellow: {str(yellow_park)}', (50, 150), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 

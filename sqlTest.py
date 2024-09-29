@@ -9,29 +9,17 @@ conn = mysql.connector.connect(
     database="projects"
 )
 
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    database="projects2"
-)
+# conn = mysql.connector.connect(
+#     host="localhost",
+#     user="root",
+#     database="projects2"
+# )
 
 cursor = conn.cursor()
 
 cursor.execute("SELECT * FROM `parkingspace`")
 cam2 = cursor.fetchall()
 
-cursor.execute("SELECT * FROM `camera`")
+cursor.execute("SELECT * FROM `parkinglot` WHERE `ParkingLot_ID` = 1;")
 cam = cursor.fetchall()
-
-cursor.execute("SELECT * FROM `parkinglot`")
-parkinglot_status = cursor.fetchall()
-all_space = parkinglot_status[0][1] 
-green_sql = parkinglot_status[0][2] 
-red_sql = parkinglot_status[0][3] 
-blue_sql = parkinglot_status[0][4] 
-yellow_sql = parkinglot_status[0][5] 
-ี
-cursor.execute(blue_sql,3)
-
-# บันทึกการเปลี่ยนแปลงในฐานข้อมูล
-conn.commit()
+print(cam)

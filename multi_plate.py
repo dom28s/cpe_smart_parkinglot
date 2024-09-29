@@ -27,16 +27,17 @@ def plateProgram():
 
 )
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM `parkingspace`")
-    cam2 = cursor.fetchall()
+
 
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM car")
+    cursor.execute("SELECT * FROM `car`;")
+    
     car_row = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM `camera`")
+    # Fetch cameras where ParkingLot_ID is 1
+    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 1;")
     cam = cursor.fetchall()
+
 
 
     with open('class.json', 'r', encoding='utf-8') as file:
@@ -47,31 +48,27 @@ def plateProgram():
     model = YOLO('model/yolov8s.pt')
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-    # vdo = cv.VideoCapture(cam[0][1])
+    # vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+    vdo = cv.VideoCapture(cam[0][1])
 
 
-    # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-    # cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
-    check = True
-    check2 = True
-    count = 0
+
     skip_frames = 12
     frame_counter = 0
 
-    wordfull = ""
+
     car_id = []
     cross_car =[]
     id_cross = set()
     dataword = []
     plateName =''
     datacar_in_park = []
-    line = []
     x_threshold=710
 
-    green = (0, 255, 0)  # empty
-    red = (0, 0, 255)    # not empty
+
     blue = (255, 0, 0)   # unknown
     yellow = (0, 255, 255)  # undefined occupancy
 
@@ -387,7 +384,7 @@ def plateProgram():
                             cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         elif not id in carhit:
                             carhit.append(id)
-            # cv.imshow('Full Scene',pic)
+            cv.imshow('Full Scene',pic)
                             
             # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
             if cv.waitKey(1) & 0xFF == ord('p'):
