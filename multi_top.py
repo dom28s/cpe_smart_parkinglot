@@ -42,17 +42,16 @@ def topProgram():
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
         
-    model = YOLO('model/yolov8l.pt')
+    model = YOLO('model/yolov10l.pt')
 
-    print('dsdfsdf')
     
-    vdo = cv.VideoCapture(cam[1][1])
-    # vdo = cv.VideoCapture('top.mp4')
+    # vdo = cv.VideoCapture(cam[1][1])
+    vdo = cv.VideoCapture('vdo_from_park/top.mp4')
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
     frame_counter = 0
-    skip_frames = 40
+    skip_frames = 20
     check = True
 
 
@@ -124,10 +123,10 @@ def topProgram():
         if multi_variable.stop_threads:
             break
         try:
+            ret, pic = vdo.read()
             # ret, pic = vdo.read()
             # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
             # cv.imshow('Full Scene', pic)
-            ret, pic = vdo.read()
 
             
                 
@@ -143,7 +142,7 @@ def topProgram():
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+            if frame_count % 280 == 0:  # ประมวลผลทุกๆ 3 เฟรม
                 result = model.track(pic_de, conf=0.5, persist=3,)
 
             overlay = pic.copy()
@@ -171,10 +170,9 @@ def topProgram():
                 id = int(x.id)
                 cls = int(x.cls)
 
-                print(cls)
 
                 car_poly = Polygon([(pix[0], pix[1]),(pix[2], pix[1]),(pix[2], pix[3]),(pix[0], pix[3])])    
-                cv.fillPoly(overlay, [np.array(car_poly.exterior.coords, np.int32)], red)
+                # cv.fillPoly(overlay, [np.array(car_poly.exterior.coords, np.int32)], red)
 
                 
 
@@ -280,8 +278,8 @@ def topProgram():
             cv.putText(pic, f'Red: {str(red_park)}', (50, 120), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             cv.putText(pic, f'Yellow: {str(yellow_park)}', (50, 150), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             if len(plate_cross ) != 0:
-                pic = put_thai_text(pic, str(plate_cross), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
-            pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 80),'THSarabunNew.ttf',48,(0, 255, 0))
+                pic = put_thai_text(pic, str(plate_cross), (50, 180),'THSarabunNew.ttf',48,(0, 255, 0))
+            pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 180),'THSarabunNew.ttf',48,(0, 255, 0))
 
             # ret, buffer = cv.imencode('.jpg', pic)
             # frame = buffer.tobytes()

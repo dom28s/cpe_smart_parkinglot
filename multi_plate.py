@@ -46,17 +46,19 @@ def plateProgram():
 
 
     model = YOLO('model/yolov8s.pt')
+    # model = YOLO('yolo11s.pt')
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
     # vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-    vdo = cv.VideoCapture(cam[0][1])
+    vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
+    # vdo = cv.VideoCapture(cam[0][1])
 
 
-    cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
-    cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
+    # cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
+    # cv.setWindowProperty('Full Scene', cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
 
 
-    skip_frames = 12
+    skip_frames = 23
     frame_counter = 0
 
 
@@ -214,15 +216,17 @@ def plateProgram():
 
             
 
-    def is_line_intersecting_bbox(car, line):
+    def is_line_intersecting_bbox(car, line1):
         x1, y1, x2, y2 = car
-        (x3, y3), (x4, y4) = line
+        x3,y3,x4,y4 = line1
+        line = (x3, y3), (x4, y4) 
         edges = [
             ((x1, y1), (x2, y1)),  # Top
             ((x2, y1), (x2, y2)),  # Right
             ((x2, y2), (x1, y2)),  # Bottom
             ((x1, y2), (x1, y1))   # Left
         ]
+        print("tttttt")
 
         for edge in edges:
             if do_intersect(edge, line):
@@ -235,7 +239,8 @@ def plateProgram():
             return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
         (A, B), (C, D) = line1, line2
         return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
-
+    
+ 
 
     def apply_otsu_threshold(image):
         gray_image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
@@ -253,14 +258,16 @@ def plateProgram():
         ])
 
 
-    def create_left_polygon(line2_points, img_width, img_height):
-        p1, p2 = line2_points
+    def create_left_polygon(line2, img_height):
+        p1,p2,p3,p4 =line2
         return Polygon([
             (0, 0),             # มุมบนซ้ายของภาพ
-            (p1[0], p1[1]),     # จุดแรกของ line2
-            (p2[0], p2[1]),     # จุดที่สองของ line2
+            (p1, p2),     # จุดแรกของ line2
+            (p3, p4),     # จุดที่สองของ line2
             (0, img_height)     # มุมล่างซ้ายของภาพ
         ])
+    
+    
 
 
     def is_intersecting(car_polygon, left_polygon):
@@ -308,13 +315,15 @@ def plateProgram():
 
             line1 = cam[0][3]
             line2 = cam[0][4]
-
+           
             line1 = json.loads(line1)
             line2 = json.loads(line2)
 
 
             cv.line(pic, (line1[0],line1[1]),(line1[2],line1[3]), yellow, 5)
             cv.line(pic, (line2[0],line2[1]),(line2[2],line2[3]), blue, 5)
+            # cv.line(pic, (line1[0]),(line1[1]), yellow, 5)
+            # cv.line(pic, (line2[0]),(line2[1]), yellow, 5)
             
             result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
 
@@ -326,7 +335,8 @@ def plateProgram():
                 car = (int(pix[0]), int(pix[1]), int(pix[2]), int(pix[3]))
 
                 car_polygon = bbox_to_polygon(pix)
-                left_polygon = create_left_polygon(line2, width, height)
+                left_polygon = create_left_polygon(line2, height)
+                print('dd')
 
                 # line 2 check dont know why
                 if is_intersecting(car_polygon, left_polygon):
@@ -378,13 +388,13 @@ def plateProgram():
                                     all_word[x] = temp
                         print(all_word)
                         dataword.append(all_word.copy())
-                        
+                    print('xxxxxxx')
                     if is_line_intersecting_bbox(car, line1):
                         if id in line2first:
                             cv.putText(pic, f"hit 2 first : {id}", (1000, 1000), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         elif not id in carhit:
                             carhit.append(id)
-            cv.imshow('Full Scene',pic)
+            # cv.imshow('Full Scene',pic)
                             
             # print(f'{timeNow} time plateeeeeeeeeeeeeeeeeeeeeee')
             if cv.waitKey(1) & 0xFF == ord('p'):
@@ -399,7 +409,7 @@ def plateProgram():
     for ajan , plate in multi_variable.finalword.items():
         print(f'{ajan} ajan in multi')
         print(f'{plate }plate in multi')
-    # print(cross_car)
+    print(cross_car)
     # print(f'id that has cross : {car_hascross}')
     print('_______ ')
 
