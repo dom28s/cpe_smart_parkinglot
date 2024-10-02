@@ -35,7 +35,7 @@ def plateProgram():
     car_row = cursor.fetchall()
 
     # Fetch cameras where ParkingLot_ID is 1
-    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 1;")
+    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 2 AND `Camera_Functions` = 'Detect License plates';")
     cam = cursor.fetchall()
 
 
@@ -48,8 +48,8 @@ def plateProgram():
     model = YOLO('model/yolov8s.pt')
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    # vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-    vdo = cv.VideoCapture(cam[0][1])
+    vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
+    # vdo = cv.VideoCapture(cam[0][1])
 
 
     cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)
