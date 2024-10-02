@@ -9,13 +9,13 @@
     "A07": "จ",
     "A08": "ฉ",
     "A09": "ช",
-    "A10": "ซ",  # Add missing character
+    "A10": "ซ",  # Add missing character still dont have
     "A11": "ฌ",
     "A12": "ญ",  # Add missing character
     "A13": "ฎ",
     "A14": "ฏ",  # Add missing character
     "A15": "ฐ",
-    "A16": "ฑ",  # Add missing character
+    "A16": "ฑ",  # Add missing character still dont
     "A17": "ฒ",
     "A18": "ณ",
     "A19": "ด",
