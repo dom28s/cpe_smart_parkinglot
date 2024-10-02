@@ -47,8 +47,8 @@ def plateProgram():
     model = YOLO('model/yolov8s.pt')
     modelP = YOLO('model/licen_100b.pt')
     modelC = YOLO('model/thaiChar_100b.pt')
-    # vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
-    vdo = cv.VideoCapture(cam[0][1])
+    vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
+    # vdo = cv.VideoCapture(cam[0][1])
 
 
     cv.namedWindow('Full Scene', cv.WND_PROP_FULLSCREEN)

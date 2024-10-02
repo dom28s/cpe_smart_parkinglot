@@ -1,4 +1,3 @@
-
 import threading
 import multi_plate
 import multi_top
@@ -6,7 +5,6 @@ import multi_variable
 import cv2 as cv
 import time
 from flask import Flask, Response, render_template
-import test2
 
 # ตัวแปรสำหรับหยุดเธรด
 multi_variable.stop_threads = False
