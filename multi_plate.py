@@ -35,7 +35,7 @@ def plateProgram():
     car_row = cursor.fetchall()
 
     # Fetch cameras where ParkingLot_ID is 1
-    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 2 AND `Camera_Functions` = 'Detect License plates';")
+    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 11 AND `Camera_Functions` = 'Detect License plates';")
     cam = cursor.fetchall()
 
 
@@ -51,8 +51,8 @@ def plateProgram():
     modelC = YOLO('model/char11x.pt')
     # modelP = YOLO('model/licen_100b.pt')
     # modelC = YOLO('model/thaiChar_100b.pt')
-    # vdo = cv.VideoCapture('vdo_from_park/G7.mp4')
-    vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
+    vdo = cv.VideoCapture('vdo_from_park/GS.mp4')
+    # vdo = cv.VideoCapture('vdo_from_park/plate.mp4')
     # vdo = cv.VideoCapture(cam[0][1])
 
 
@@ -329,6 +329,7 @@ def plateProgram():
             # cv.line(pic, (line2[0]),(line2[1]), yellow, 5)
             
             result_model = model.track(pic_black, conf=0.5, classes=2, persist=True)
+            left_polygon = create_left_polygon(line2, height)
 
             for e in result_model[0].boxes:
                 name = result_model[0].names[int(e.cls)]
