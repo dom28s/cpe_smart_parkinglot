@@ -28,30 +28,31 @@ def topProgram():
 )
 
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM `parkingspace` WHERE `ParkingLot_ID` = 1;")
+    cursor.execute("SELECT * FROM `parkingspace` WHERE `ParkingLot_ID` = 11;")
     park = cursor.fetchall()
     
     # Fetch cameras where ParkingLot_ID is 1
-    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 1;")
+    cursor.execute("SELECT * FROM `camera` WHERE `ParkingLot_ID` = 11 AND `Camera_Functions` = 'Detect space';")
     cam = cursor.fetchall()
-
-    cursor.execute("SELECT * FROM `parkinglot` WHERE `ParkingLot_ID` = 1;")
+    print(cam)
+    cursor.execute("SELECT * FROM `parkinglot` WHERE `ParkingLot_ID` = 11;")
     park_status = cursor.fetchall()
 
     plate_cross =[]
     with open('class.json', 'r', encoding='utf-8') as file:
         letter_dic = json.load(file)
         
-    model = YOLO('model/yolov10l.pt')
+    model = YOLO('model/yolov8m.pt')
 
     
-    # vdo = cv.VideoCapture(cam[1][1])
+    # vdo = cv.VideoCapture(cam[0][1])
     vdo = cv.VideoCapture('vdo_from_park/top.mp4')
+    vdo = cv.VideoCapture('vdo_from_park/topCam.mp4')
     # vdo = cv.VideoCapture('rtsp://admin:Admin123456@192.168.1.107:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif')
 
 
     frame_counter = 0
-    skip_frames = 20
+    skip_frames = 28
     check = True
 
 
@@ -111,12 +112,29 @@ def topProgram():
         draw.text(position, text, font=font, fill=color)
         image = cv.cvtColor(np.array(image_pil), cv.COLOR_RGB2BGR)
         return image
+    
+    def load_park_from_json(filename):
+        global park_data, enter_data
+        if os.path.exists(filename):
+            if filename == 'park.json':
+                with open(filename, 'r') as f:
+                    park_data = json.load(f)
+                return park_data
 
-    # park_data=load_park_from_json('park.json')
-    # enter_data=load_park_from_json('enter.json')
+            if filename == 'enter.json':
+                with open(filename, 'r') as f:
+                    enter_data = json.load(f)
+                    print(f'Loaded enter_data: {enter_data}') 
+                    return enter_data
 
-    enter_data,park_data=load_from_sql()
-    cursor.execute("UPDATE `parkinglot` SET `AllSpace` = %s WHERE `ParkingLot_ID` = 1;", (len(park_data),))
+    park_data=load_park_from_json('park.json')
+    enter_data=load_park_from_json('enter.json')
+
+    print(enter_data)
+    print(park_data)
+
+    # enter_data,park_data=load_from_sql()
+    # cursor.execute("UPDATE `parkinglot` SET `AllSpace` = %s WHERE `ParkingLot_ID` = 1;", (len(park_data),))
     
 
     while True:
@@ -124,6 +142,8 @@ def topProgram():
             break
         try:
             ret, pic = vdo.read()
+            pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
+
             # ret, pic = vdo.read()
             # pic = cv.rotate(pic, cv.ROTATE_90_COUNTERCLOCKWISE)
             # cv.imshow('Full Scene', pic)
@@ -133,7 +153,7 @@ def topProgram():
             if not ret:
                 print('Fail to read, trying to restart')
                 # break
-                vdo = cv.VideoCapture(cam[1][1])
+                vdo = cv.VideoCapture(cam[0][1])
                 time.sleep(1)
                 continue
 
@@ -142,7 +162,7 @@ def topProgram():
             frame_counter += 1
             if frame_counter % (skip_frames + 1) != 0:
                 continue
-            if frame_count % 280 == 0:  # ประมวลผลทุกๆ 3 เฟรม
+            if frame_count % 120 == 0:  # ประมวลผลทุกๆ 3 เฟรม
                 result = model.track(pic_de, conf=0.5, persist=3,)
 
             overlay = pic.copy()
@@ -155,7 +175,9 @@ def topProgram():
 
             
             # turn enter to polygon
-            enter_poly = Polygon(enter_data[0])  
+
+            enter_poly = Polygon(enter_data)  
+            # enter_poly = Polygon(enter_data[0])  
             cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], purple)
 
             # turn park to poly
@@ -184,13 +206,12 @@ def topProgram():
                     cv.putText(pic, "%s  %.0f" % (str(name), float(x.id)), (int(pix[0]), int(pix[1])), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
 
                 
-
                 enter_inter = polygon_intersection_area(enter_poly, car_poly)
                 enter_area = polygon_area(enter_poly)
                 enter_percentage = (enter_inter / enter_area) * 100
 
                 # just car NEED TO FIX LATER
-                if enter_percentage >= 30:
+                if enter_percentage >= 5:
                     
                         for ajan_value, plate_value in zip(multi_variable.finalword['ajan'], multi_variable.finalword['plate']):
                             # ใช้ ajan_value โดยตรง
@@ -203,7 +224,7 @@ def topProgram():
 
 
                         cv.fillPoly(overlay, [np.array(enter_poly.exterior.coords, np.int32)], red)
-                cv.putText(pic, str(car_track), (10,200), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+                # cv.putText(pic, str(car_track), (10,200), cv.FONT_HERSHEY_SIMPLEX, 1, red, 2)
   
 
                 # Parking space occupancy check
@@ -279,7 +300,7 @@ def topProgram():
             cv.putText(pic, f'Yellow: {str(yellow_park)}', (50, 150), cv.FONT_HERSHEY_SIMPLEX, 1, green, 2, cv.LINE_AA) 
             if len(plate_cross ) != 0:
                 pic = put_thai_text(pic, str(plate_cross), (50, 180),'THSarabunNew.ttf',48,(0, 255, 0))
-            pic = put_thai_text(pic, str(multi_variable.finalword['plate']), (50, 180),'THSarabunNew.ttf',48,(0, 255, 0))
+            pic = put_thai_text(pic, f'{str(multi_variable.finalword['plate'])} dsfd', (50, 180),'THSarabunNew.ttf',48,(0, 255, 0))
 
             # ret, buffer = cv.imencode('.jpg', pic)
             # frame = buffer.tobytes()
